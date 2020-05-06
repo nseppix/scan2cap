@@ -46,7 +46,7 @@ Technical University of Munich\\
 
 %%%%%%%%% ABSTRACT
 \begin{abstract}
-	Inspired by recent work on image captioning in the 2D world, we aim to transfer the task into the 3D domain. To this end, we propose a pipeline which combines concepts from 3D object detection and 2D attention-based captioning to generate a caption for a specified 3D object. The proposed pipeline first uses VoteNet to extract feature vectors of the scene. It then combines this information with the features of the object of interest, which are extracted by PointNet++, and feeds this data into an LSTM captioning mechanism, that generates a caption of the object in context of the scene.  
+	Inspired by recent work on image captioning in the 2D world, we aim to transfer the task to the 3D domain. To this end, we propose a pipeline which combines concepts from 3D object detection and 2D attention-based captioning to generate a caption for a specified 3D object. The proposed pipeline first uses VoteNet to extract feature vectors of the scene. It then combines this information with the features of the object of interest, which are extracted by PointNet++, and feeds this data into an LSTM captioning mechanism, that generates a caption of the object in context of the scene.  
    
 \end{abstract}
 
@@ -60,9 +60,9 @@ Therefore, we are interested in implementing a pipeline to obtain a description 
  
 %-------------------------------------------------------------------------
 \section{Related Work}
-Our work will be based on the ScanRefer dataset \cite{Chen2019}. The dataset consists of 1513 RGB-D scans of ScanNet\cite{Dai2017} 5 unique object descriptions for all existing objects in a scene. The work of \cite{Chen2019} will also be used as guideline in this project.
+Our work will be based on the ScanRefer dataset \cite{Chen2019}. This dataset consists of 1513 RGB-D scans of ScanNet \cite{Dai2017} and contains approximately 5 unique object descriptions for each object in each scene. The work of \cite{Chen2019} will also be used as guideline in this project.
 
-The extraction of features on point clouds is presented by \cite{Qi2017} applies the feature extraction directly on the point cloud on a hierarchical level, allowing the extraction of local features in a global context. 
+The extraction of features on point clouds is presented by \cite{Qi2017}, who apply the feature extraction directly on the point cloud on a hierarchical level, allowing the extraction of local features in a global context. 
 The task of object detection on point clouds is studied by \cite{Qi2019}. 
 
 Methods for image captioning using visual attention are described by \cite{Xu2015}, \cite{Lu2016} and \cite{Anderson2017}.
