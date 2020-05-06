@@ -1,0 +1,6 @@
+[submodule "votenet"]
+	path = votenet
+	url = https://github.com/facebookresearch/votenet
+[submodule "Pointnet2_PyTorch"]
+	path = Pointnet2_PyTorch
+	url = https://github.com/erikwijmans/Pointnet2_PyTorch
