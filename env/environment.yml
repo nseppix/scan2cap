@@ -1,0 +1,21 @@
+  name: adl4cv
+  channels:
+    - pytorch
+    - conda-forge
+  dependencies:
+    - python=3.6
+    - pytorch
+    - torchvision
+    - jupyter
+    - tensorboard
+    - matplotlib 
+    - pip
+    - pip:
+        - minieigen
+        - scikit-image
+        - tqdm
+        - tensorboardx
+        - trimesh==2.35.39
+        - easydict
+        - h5py
+        - plyfile
