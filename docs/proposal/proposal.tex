@@ -21,7 +21,7 @@
 
 % Pages are numbered in submission mode, and unnumbered in camera-ready
 %\ifcvprfinal\pagestyle{empty}\fi
-\setcounter{page}{4321}
+\setcounter{page}{1}
 \begin{document}
 
 %%%%%%%%% TITLE
@@ -46,7 +46,7 @@ Technical University of Munich\\
 
 %%%%%%%%% ABSTRACT
 \begin{abstract}
-	Inspired by recent work on image captioning in the 2D world, we aim to transfer the task on 3D Data. To this aim we propose a pipeline which combines concepts from 3D object detection and 2D atttention based captioning to generate a caption for a specified 3D object. The proposed pipeline uses VoteNet to extract feature vectors of the secene. Feeding this information combined with the features of the object of interest extracted by PointNet++ into a LSTM captioning mechanism generates a caption of the object in context to the scene.  
+	Inspired by recent work on image captioning in the 2D world, we aim to transfer the task into the 3D domain. To this end, we propose a pipeline which combines concepts from 3D object detection and 2D attention-based captioning to generate a caption for a specified 3D object. The proposed pipeline first uses VoteNet to extract feature vectors of the scene. It then combines this information with the features of the object of interest, which are extracted by PointNet++, and feeds this data into an LSTM captioning mechanism, that generates a caption of the object in context of the scene.  
    
 \end{abstract}
 
