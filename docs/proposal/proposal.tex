@@ -6,6 +6,7 @@
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage[utf8]{inputenc}
 
 % Include other packages here, before hyperref.
 
@@ -46,7 +47,7 @@ Technical University of Munich\\
 
 %%%%%%%%% ABSTRACT
 \begin{abstract}
-	Inspired by recent work on image captioning in the 2D world, we aim to transfer the task to the 3D domain. To this end, we propose a pipeline which combines concepts from 3D object detection and 2D attention-based captioning to generate a caption for a specified 3D object. The proposed pipeline first uses VoteNet to extract feature vectors of the scene. It then combines this information with the features of the object of interest, which are extracted by PointNet++, and feeds this data into an LSTM captioning mechanism, that generates a caption of the object in context of the scene.  
+	Inspired by recent work on image captioning in the 2D world, we aim to investigate the task in the 3D domain. To this end, we propose a pipeline which combines concepts from 3D object detection and 2D attention-based captioning to generate a caption for a specified 3D object. The proposed pipeline first uses VoteNet to extract feature vectors of the scene. It then combines this information with the features of the object of interest, which are extracted by PointNet++, and feeds this data into an LSTM captioning mechanism, that generates a caption of the object in context of the scene.  
    
 \end{abstract}
 
@@ -54,7 +55,7 @@ Technical University of Munich\\
 \section{Introduction}
 
 The "Deep Learning" revolution has enabled great progress in the field of captioning or image description. This task has been studied in a sophisticated way for 2D images using different attention mechanisms.
-However, transferring this task to generate a description of an object representation in point clouds or 3D data, there has been no work so far to the best of our knowledge.
+However, there has been no work so far to the best of our knowledge for generating a description of an object representation in point clouds or 3D data.
 
 Therefore, we are interested in implementing a pipeline to obtain a description for a given object in a 3D scan, using state-of-the-art point cloud feature extractors, object detectors, and a captioning mechanism to generate a semantic description for a given object in the 3D scene. This allows the object to be placed in a global semantic context within its environment.
  
@@ -72,7 +73,7 @@ Since our goal includes using a bounding box for the object to be set in context
 %-------------------------------------------------------------------------
 \section{Methods and Concept}
 
-Given a point cloud $\mathit{pc \in R^{N\times(d+C)}}$ and an object in that scene, which is described by a target bounding box $b_{target}\in R^6$, our goal is to generate a meaningful caption for the object embedded in the context of the scene. To this end, we plan to use the pipeline described in the following, which was inspired by \cite{Anderson2017}.
+Given a point cloud $\mathit{p \in R^{N\times(d+C)}}$ and an object in that scene, which is described by a target bounding box $b_{target}\in R^6$, our goal is to generate a meaningful caption for the object embedded in the context of the scene. To this end, we plan to use the pipeline described in the following, which was inspired by \cite{Anderson2017}.
 
 To infer information specific to the target object itself, we crop out the points belonging to the bounding box of the object and use a PointNet++ \cite{Qi2017} network on the obtained sub point cloud. This will give a feature vector $\mathit{target\_feats}\in R^{128}$. In order to compute meaningful features, we use weights pretrained for point cloud classification.
 
