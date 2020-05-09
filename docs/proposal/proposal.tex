@@ -7,6 +7,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage[utf8]{inputenc}
+\usepackage{booktabs,tabularx,enumitem,ragged2e}
 
 % Include other packages here, before hyperref.
 
@@ -92,35 +93,42 @@ For the generation of the caption, we use a classical LSTM. As input, we concate
 	\label{fig:pipeline}
 \end{figure*}
 
-\section{Project Milestones}
-In the following, we briefly describe the individual tasks that are to be completed by the time of the intermediate and final presentations.
-
-
-
-\paragraph{First Presentation}
-\begin{itemize}
-	\setlength\itemsep{0em}
-	\item Get familiar with dataset
-	\item Test different sub components of pipeline (e.g. PointNet++, VoteNet and captioning mechanism)
-	\item Start implementing the pipeline
-	\item Optional: first training
-\end{itemize}
-
-\paragraph{Second Presentation}
-\begin{itemize}
-	\setlength\itemsep{0em}
-	\item Finish implementation of pipeline
-	\item Training and hyperparameter tuning
-	\item Set up concept for attention mechanism
-	\item Optional: start implementing attention
-\end{itemize}
-
-\paragraph{Final Presentation}
-\begin{itemize}
-	\setlength\itemsep{0em}
-	\item Final results
-	\item Optional: attention mechanism
-\end{itemize}
+\begin{table*}
+	\centering
+	\begin{tabularx}{\textwidth}{l|l}
+	\textbf{Date} & \textbf{Milestones} \\
+	\hline
+	\textbf{First Presentation} & 
+	\begin{minipage}[t]{\textwidth}
+		\begin{itemize}[nosep, wide=0pt, leftmargin=*, after=\strut]
+			\item Get familiar with dataset
+			\item Test different sub components of pipeline (e.g. PointNet++, VoteNet and captioning mechanism)
+			\item Start implementing the pipeline
+			\item Optional: first training
+		\end{itemize}  
+	\end{minipage}\\
+	\hline
+	\textbf{Second Presentation} & 
+	\begin{minipage}[t]{\linewidth}
+		\begin{itemize}[nosep, wide=0pt, leftmargin=*, after=\strut]
+			\item Finish implementation of pipeline
+			\item Training and hyperparameter tuning
+			\item Set up concept for attention mechanism
+			\item Optional: start implementing attention
+		\end{itemize}  
+	\end{minipage}\\
+	\hline
+	\textbf{Final Presentation} & 
+	\begin{minipage}[t]{\linewidth}
+		\begin{itemize}[nosep, wide=0pt, leftmargin=*, after=\strut]
+			\item Final results
+			\item Optional: attention mechanism
+		\end{itemize}  
+	\end{minipage}\\
+	\end{tabularx}
+	\caption{Project milestones}
+	\label{tab:milestones}
+\end{table*}
 
 {\small
 \bibliographystyle{ieee_fullname}
