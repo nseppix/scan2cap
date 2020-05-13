@@ -1,0 +1,138 @@
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+\usepackage{cvpr}
+\usepackage{times}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs,tabularx,enumitem,ragged2e}
+
+% Include other packages here, before hyperref.
+
+% If you comment hyperref and then uncomment it, you should delete
+% egpaper.aux before re-running latex.  (Or just hit 'q' on the first latex
+% run, let it finish, and you should be clear).
+\usepackage[breaklinks=true,bookmarks=false]{hyperref}
+
+\cvprfinalcopy % *** Uncomment this line for the final submission
+
+\def\cvprPaperID{****} % *** Enter the CVPR Paper ID here
+\def\httilde{\mbox{\tt\raisebox{-.5ex}{\symbol{126}}}}
+
+% Pages are numbered in submission mode, and unnumbered in camera-ready
+%\ifcvprfinal\pagestyle{empty}\fi
+\setcounter{page}{1}
+\begin{document}
+
+%%%%%%%%% TITLE
+\title{Project Proposal for ADL4CV: Scan2Cap}
+
+\author{Felix Wimbauer\\
+Technical University of Munich\\
+{\tt\small felix.wimbauer@tum.de}
+% For a paper whose authors are all at the same institution,
+% omit the following lines up until the closing ``}''.
+% Additional authors and addresses can be added with ``\and'',
+% just like the second author.
+% To save space, use either the email address or home page, not both
+\and
+Nicolas Seppich\\
+Technical University of Munich\\
+{\tt\small nicolas.seppich@tum.De}
+}
+
+\maketitle
+%\thispagestyle{empty}
+
+%%%%%%%%% ABSTRACT
+\begin{abstract}
+	In this work, we aim to investigate the task of generating a description for a target object in context to its environment in the 3D domain. To this end, we propose a pipeline which combines concepts from 3D object detection and visal attention-based captioning. The proposed pipeline first uses VoteNet to extract feature vectors of the scene. It then combines this information with the features of the object of interest, which are extracted by PointNet++, and feeds this data into an LSTM captioning mechanism, that generates a caption of the object in context of the scene.  
+   
+\end{abstract}
+
+%%%%%%%%% BODY TEXT
+\section{Introduction}
+
+Extracting a detailed and semantic correct understanding of the layout of a 3D scene is crucial for many tasks, e.g. in robotics for navigation and interaction with objects. This includes relating the 3D positions of the objects and their spatial extent, so that a semantically correct description of the objects' environment is generated.
+However, to the best of our knowledge, there has been no work so far to generate a description of an object representation in point clouds or 3D data.
+
+Therefore, we are interested in implementing a pipeline to obtain a description for a given object in a 3D scan, using state-of-the-art point cloud feature extractors, object detectors, and a captioning mechanism to generate a semantic description for a given object in the 3D scene. This allows the object to be placed in a global semantic context within its environment.
+ 
+%-------------------------------------------------------------------------
+\section{Related Work}
+Our work will be based on the ScanRefer dataset \cite{chen2019scanrefer}. This dataset consists of 1513 RGB-D scans of ScanNet \cite{dai2017scannet} and contains approximately 5 unique object descriptions for each object in each scene. The work of \cite{chen2019scanrefer} will also be used as guideline in this project.
+
+The extraction of features on point clouds is presented by \cite{qi2017pointnet++}, who apply the feature extraction directly on the point cloud on a hierarchical level, allowing the extraction of local features in a global context. 
+The task of object detection on point clouds is studied by \cite{qi2019deep}. 
+
+Methods for image captioning using visual attention are described by \cite{xu2015show}, \cite{lu2017knowing} and \cite{anderson2018bottom}.
+These methods have in common, that they generate a caption for the entire image.
+Since our goal includes using a bounding box for the object to be set in context to the scene, the work of \cite{rohrbach2016grounding} is also of interest for this project. 
+
+%-------------------------------------------------------------------------
+\section{Methods and Concept}
+
+Given a point cloud $\mathit{p \in R^{N\times(d+C)}}$ and an object in that scene, which is described by a target bounding box $b_{target}\in R^6$, our goal is to generate a meaningful caption for the object embedded in the context of the scene. To this end, we plan to use the pipeline described in the following, which was inspired by \cite{anderson2018bottom}.
+
+To infer information specific to the target object itself, we crop out the points belonging to the bounding box of the object and use a PointNet++ \cite{qi2017pointnet++} network on the obtained sub point cloud. This will give a feature vector $\mathit{f_{target}}\in R^{128}$. In order to compute meaningful features, we use weights pretrained for point cloud classification.
+
+To infer information about the scene in general, we employ a VoteNet \cite{qi2019deep} network. We don't use the final object labels and bounding boxes, but the feature vectors $\mathit{f_{object}}\in R^{M\times128}$ generated by the \textit{ProposalModule}.
+
+In our initial pipeline, we combine those features through average pooling into $\mathit{f_{scene}}\in R^{128}$. At a later stage, it is possible to replace this step with attention-based pooling, similar to \cite{anderson2018bottom}.
+
+For the generation of the caption, we use a classical LSTM. As input, we concatenate the $\mathit{f_{target}}$, $\mathit{f_{scence}}$ and word embedding vector of the previously generated word together. The word embedding is taken from a pre-computed GloVe \cite{pennington2014glove} word embedding matrix. The output of the LSTM is passed through a fully-connected layer and softmax function to obtain probabilities for the various possible next words (similar to \cite{xu2015show}).
+
+\autoref{fig:pipeline} summarizes the project pipeline.
+
+\begin{figure*}
+	\centering
+	\includegraphics[width=\textwidth]{figures/pipeline_sketch.pdf}
+	\caption{Pipeline for project}
+	\label{fig:pipeline}
+\end{figure*}
+
+\begin{table*}
+	\centering
+	\begin{tabularx}{\textwidth}{l|l}
+	\textbf{Date} & \textbf{Milestones} \\
+	\hline
+	\textbf{First Presentation} & 
+	\begin{minipage}[t]{\textwidth}
+		\begin{itemize}[nosep, wide=0pt, leftmargin=*, after=\strut]
+			\item Get familiar with dataset
+			\item Test different sub components of pipeline (e.g. PointNet++, VoteNet and captioning mechanism)
+			\item Start implementing the pipeline
+			\item Optional: first training
+		\end{itemize}  
+	\end{minipage}\\
+	\hline
+	\textbf{Second Presentation} & 
+	\begin{minipage}[t]{\linewidth}
+		\begin{itemize}[nosep, wide=0pt, leftmargin=*, after=\strut]
+			\item Finish implementation of pipeline
+			\item Training and hyperparameter tuning
+			\item Set up concept for attention mechanism
+			\item Optional: start implementing attention
+		\end{itemize}  
+	\end{minipage}\\
+	\hline
+	\textbf{Final Presentation} & 
+	\begin{minipage}[t]{\linewidth}
+		\begin{itemize}[nosep, wide=0pt, leftmargin=*, after=\strut]
+			\item Final results
+			\item Optional: attention mechanism
+		\end{itemize}  
+	\end{minipage}\\
+	\end{tabularx}
+	\caption{Project milestones}
+	\label{tab:milestones}
+\end{table*}
+
+{\small
+\bibliographystyle{ieee_fullname}
+\bibliography{proposal}
+}
+
+\end{document}
