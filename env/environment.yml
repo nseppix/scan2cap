@@ -6,7 +6,7 @@
   dependencies:
     - python=3.6
     - numpy
-    - pytorch
+    - pytorch=1.2.0
     - cpuonly
     - torchvision
     - jupyter
