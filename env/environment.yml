@@ -2,20 +2,30 @@
   channels:
     - pytorch
     - conda-forge
+    - anaconda
   dependencies:
     - python=3.6
+    - numpy
     - pytorch
+    - cpuonly
     - torchvision
     - jupyter
     - tensorboard
-    - matplotlib 
+    - matplotlib
+    - plyfile
+    - easydict
+    - msgpack-numpy
+    - h5py
+    - scikit-image
+    - tqdm
+    - lmdb
     - pip
     - pip:
         - minieigen
-        - scikit-image
-        - tqdm
         - tensorboardx
-        - trimesh==2.35.39
-        - easydict
-        - h5py
-        - plyfile
+        - 'trimesh>=2.35.39,<2.35.40'
+        - 'networkx>=2.2,<2.3'
+        - hydra-core
+        - pytorch-lightning
+        - ../Pointnet2_PyTorch/pointnet2_ops_lib/.
+
