@@ -7,3 +7,6 @@
 [submodule "a-PyTorch-Tutorial-to-Image-Captioning"]
 	path = a-PyTorch-Tutorial-to-Image-Captioning
 	url = https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning.git
+[submodule "ScanRefer"]
+	path = ScanRefer
+	url = https://github.com/daveredrum/ScanRefer.git
