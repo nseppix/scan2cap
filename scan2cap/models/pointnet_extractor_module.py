@@ -5,9 +5,11 @@ from lib.pointnet2.pointnet2_modules import PointnetSAModule, PointnetSAModuleMS
 
 
 class PointNetExtractor(nn.Module):
-    def __init__(self, pretrain_mode=False):
+    def __init__(self, pretrain_mode=False, feature_channels=3, use_xyz=True):
         super().__init__()
         self.pretrain_mode = pretrain_mode
+        self.feature_channels = feature_channels + 1
+        self.use_xyz = use_xyz
 
         self.SA_modules = nn.ModuleList()
         self.SA_modules.append(
@@ -15,8 +17,8 @@ class PointNetExtractor(nn.Module):
                 npoint=512,
                 radii=[0.1, 0.2, 0.4],
                 nsamples=[16, 32, 128],
-                mlps=[[3, 32, 32, 64], [3, 64, 64, 128], [3, 64, 96, 128]],
-                use_xyz=self.hparams.model.use_xyz,
+                mlps=[[self.feature_channels, 32, 32, 64], [self.feature_channels, 64, 64, 128], [self.feature_channels, 64, 96, 128]],
+                use_xyz=self.use_xyz,
             )
         )
 
@@ -31,13 +33,13 @@ class PointNetExtractor(nn.Module):
                     [input_channels, 128, 128, 256],
                     [input_channels, 128, 128, 256],
                 ],
-                use_xyz=self.hparams.model.use_xyz,
+                use_xyz=self.use_xyz,
             )
         )
         self.SA_modules.append(
             PointnetSAModule(
                 mlp=[128 + 256 + 256, 256, 512, 1024],
-                use_xyz=self.hparams.model.use_xyz,
+                use_xyz=self.use_xyz,
             )
         )
 
@@ -73,21 +75,12 @@ class PointNetExtractor(nn.Module):
         box_center = data_dict["ref_center_label"]
         box_size = data_dict["ref_size_residual_label"]
 
-        mask = (box_center.unsqueeze(1) - box_size.unsqueeze(1) / 2 <= xyz <= box_center.unsqueeze(1) + box_size.unsqueeze(1) / 2)
-        mask = torch.all(mask, dim=2)
+        mask = (box_center.unsqueeze(1) - box_size.unsqueeze(1) / 2 <= xyz) & (xyz <= box_center.unsqueeze(1) + box_size.unsqueeze(1) / 2)
+        mask = torch.all(mask, dim=2, keepdim=True).permute( 0, 2, 1).to(dtype=torch.float32)
+        features = torch.cat([features, mask], dim=1)
 
-        batch_size = pointcloud.shape[0]
-        features_list = []
-
-        for i in range(batch_size):
-            xyz_sample = xyz[i, mask[i], :].unsqueeze(0)
-            features_sample = features[i, mask[i], :].unsqueeze(0)
-
-            for module in self.SA_modules:
-                xyz_sample, features_sample = module(xyz_sample, features_sample)
-            features_list.append(features_sample)
-
-        features = torch.cat(features_list, dim=0)
+        for module in self.SA_modules:
+            xyz, features = module(xyz, features)
 
         pc_features = self.fc_layer_1(features.squeeze(-1))
         data_dict["ref_obj_features"] = pc_features

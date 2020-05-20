@@ -6,7 +6,7 @@ CONF = EasyDict()
 
 # path
 CONF.PATH = EasyDict()
-CONF.PATH.BASE = "/usr/stud/wimbauer/storage/user/adl4cv/ScanRefer/" # TODO: change this
+CONF.PATH.BASE = "/usr/stud/wimbauer/storage/user/adl4cv/scan2cap/" # TODO: change this
 CONF.PATH.DATA = os.path.join(CONF.PATH.BASE, "../data/scanrefer")
 CONF.PATH.SCANNET = os.path.join(CONF.PATH.DATA, "../scannet")
 CONF.PATH.LIB = os.path.join(CONF.PATH.BASE, "lib")

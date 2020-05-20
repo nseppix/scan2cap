@@ -45,8 +45,8 @@ BEST_REPORT_TEMPLATE = """
 [sco.] ref_acc: {ref_acc}
 """
 
-class Solver():
-    def __init__(self, model, config, dataloader, optimizer, stamp, val_step=10, use_lang_classifier=True, use_max_iou=False):
+class SolverPretrain():
+    def __init__(self, model, config, dataloader, optimizer, stamp, val_step=10, early_stopping=-1):
         self.epoch = 0                    # set in __call__
         self.verbose = 0                  # set in __call__
         
@@ -56,8 +56,9 @@ class Solver():
         self.optimizer = optimizer
         self.stamp = stamp
         self.val_step = val_step
-        self.use_lang_classifier = use_lang_classifier
-        self.use_max_iou = use_max_iou
+        self.early_stopping = early_stopping
+        self.no_improve = 0
+        self.stop = False
 
         self.best = {
             "epoch": 0,
@@ -123,6 +124,9 @@ class Solver():
                 self._log("saving last models...\n")
                 model_root = os.path.join(CONF.PATH.OUTPUT, self.stamp)
                 torch.save(self.model.state_dict(), os.path.join(model_root, "model_last.pth"))
+
+                if self.stop:
+                    break
                 
             except KeyboardInterrupt:
                 # finish training
@@ -231,10 +235,13 @@ class Solver():
                 self._dump_log("train")
                 self._global_iter_id += 1
 
+                if self.stop:
+                    return
+
 
         # check best
         if phase == "val":
-            cur_criterion = "iou_rate_0.5"
+            cur_criterion = "ref_acc"
             cur_best = np.mean(self.log[phase][cur_criterion])
             if cur_best > self.best[cur_criterion]:
                 self._log("best {} achieved: {}".format(cur_criterion, cur_best))
@@ -248,10 +255,17 @@ class Solver():
                 self._log("saving best models...\n")
                 model_root = os.path.join(CONF.PATH.OUTPUT, self.stamp)
                 torch.save(self.model.state_dict(), os.path.join(model_root, "model.pth"))
+                self.no_improve = 0
+            else:
+                self.no_improve += 1
+                self._log(f"no improvement for {self.no_improve} validations...\n")
+                if self.early_stopping > 0 and self.no_improve >= self.early_stopping:
+                    self.stop = True
+                    self._log(f"early stopping because no improvements were achieved after {self.no_improve} validations...\n")
 
     def _eval(self, data_dict):
         # dump
-        self._running_log["ref_acc"] = np.mean(data_dict["ref_acc"])
+        self._running_log["ref_acc"] = np.mean(data_dict["ref_acc"].cpu().numpy())
 
     def _dump_log(self, phase):
         log = {
