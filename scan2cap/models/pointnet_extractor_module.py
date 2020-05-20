@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 
 from lib.pointnet2.pointnet2_modules import PointnetSAModule, PointnetSAModuleMSG
 
@@ -54,7 +55,7 @@ class PointNetExtractor(nn.Module):
             nn.Linear(256, 40),
         )
 
-    def forward(self, pointcloud):
+    def forward(self, data_dict):
         r"""
             Forward pass of the network
 
@@ -66,16 +67,33 @@ class PointNetExtractor(nn.Module):
                 Each point in the point-cloud MUST
                 be formated as (x, y, z, features...)
         """
+        pointcloud = data_dict["point_clouds"]
         xyz, features = self._break_up_pc(pointcloud)
 
-        for module in self.SA_modules:
-            xyz, features = module(xyz, features)
+        box_center = data_dict["ref_center_label"]
+        box_size = data_dict["ref_size_residual_label"]
+
+        mask = (box_center.unsqueeze(1) - box_size.unsqueeze(1) / 2 <= xyz <= box_center.unsqueeze(1) + box_size.unsqueeze(1) / 2)
+        mask = torch.all(mask, dim=2)
+
+        batch_size = pointcloud.shape[0]
+        features_list = []
+
+        for i in range(batch_size):
+            xyz_sample = xyz[i, mask[i], :].unsqueeze(0)
+            features_sample = features[i, mask[i], :].unsqueeze(0)
+
+            for module in self.SA_modules:
+                xyz_sample, features_sample = module(xyz_sample, features_sample)
+            features_list.append(features_sample)
+
+        features = torch.cat(features_list, dim=0)
 
         pc_features = self.fc_layer_1(features.squeeze(-1))
-        if not self.pretrain_mode:
-            return pc_features
-        else:
-            return self.fc_layer_2(pc_features)
+        data_dict["ref_obj_features"] = pc_features
+        if self.pretrain_mode:
+            data_dict["ref_obj_cls_scores"] = self.fc_layer_2(pc_features)
+        return data_dict
 
     def _break_up_pc(self, pc):
         xyz = pc[..., 0:3].contiguous()

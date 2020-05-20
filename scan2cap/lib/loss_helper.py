@@ -5,6 +5,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import sys
 import os
@@ -423,5 +424,21 @@ def get_loss(data_dict, config, reference=False, use_lang_classifier=False, use_
         data_dict["lang_acc"] = (torch.argmax(data_dict['lang_scores'], 1) == data_dict["object_cat"]).float().mean()
     else:
         data_dict["lang_acc"] = torch.zeros(1)[0].cuda()
+
+    return loss, data_dict
+
+
+def pointnet_pretrain_loss(data_dict):
+    target = data_dict["ref_nyu40_label"]
+    scores = data_dict["ref_obj_cls_scores"]
+    probs = F.softmax(scores, dim=1)
+    loss = F.cross_entropy(probs, target-1)
+    data_dict["loss"] = loss
+
+    _, preds = torch.max(scores, dim=1)
+    preds += 1
+    acc = torch.mean((preds == target).to(dtype=torch.float32))
+    data_dict["ref_acc"] = acc
+    data_dict["scores"] = preds
 
     return loss, data_dict

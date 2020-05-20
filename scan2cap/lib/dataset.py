@@ -191,6 +191,7 @@ class ScannetReferenceDataset(Dataset):
                 ref_heading_residual_label = angle_residuals[i]
                 ref_size_class_label = size_classes[i]
                 ref_size_residual_label = size_residuals[i]
+                ref_class_ind = instance_bboxes[i, -2]
             
         data_dict = {}
         data_dict["point_clouds"] = point_cloud.astype(np.float32) # point cloud data including features
@@ -217,6 +218,7 @@ class ScannetReferenceDataset(Dataset):
         data_dict["ref_heading_residual_label"] = np.array(int(ref_heading_residual_label)).astype(np.int64)
         data_dict["ref_size_class_label"] = np.array(int(ref_size_class_label)).astype(np.int64)
         data_dict["ref_size_residual_label"] = ref_size_residual_label.astype(np.float32)
+        data_dict["ref_nyu40_label"] = np.array(int(ref_class_ind)).astype(np.int64)
         data_dict["object_id"] = np.array(int(object_id)).astype(np.int64)
         data_dict["ann_id"] = np.array(int(ann_id)).astype(np.int64)
         data_dict["object_cat"] = np.array(self.raw2label[object_name]).astype(np.int64)
