@@ -149,6 +149,8 @@ class Scan2CapDataset(Dataset):
         data_dict = {}
         data_dict["point_clouds"] = point_cloud.astype(np.float32) # point cloud data including features
         data_dict["lang_indices"] = lang_indices.astype(np.int64)
+        if self.lang_tokens:
+            data_dict["lang_tokens"] = lang_tokens
         data_dict["lang_len"] = np.array(lang_len).astype(np.int64) # length of each description
         data_dict["pcl_color"] = pcl_color
         data_dict["ref_box_label"] = target_bboxes.astype(np.int64) # 0/1 reference labels for each object bbox
