@@ -8,6 +8,7 @@ import numpy as np
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
+from lib.scannet_cls_dataset import ScannetPretrainDataset
 from lib.solver_pretrain import SolverPretrain
 from models.pointnet_extractor_module import PointNetExtractor
 
@@ -15,7 +16,6 @@ sys.path.append(os.path.join(os.getcwd())) # HACK add the root folder
 from data.scannet.model_util_scannet import ScannetDatasetConfig
 from lib.dataset import ScannetReferenceDataset
 from lib.config import CONF
-from models.refnet import RefNet
 
 SCANREFER_TRAIN = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_train.json")))
 SCANREFER_VAL = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_val.json")))
@@ -24,17 +24,29 @@ SCANREFER_VAL = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_
 DC = ScannetDatasetConfig()
 
 def get_dataloader(args, scanrefer, all_scene_list, split, config, augment):
-    dataset = ScannetReferenceDataset(
-        scanrefer=scanrefer[split], 
-        scanrefer_all_scene=all_scene_list, 
-        split=split, 
-        num_points=args.num_points, 
-        use_height=(not args.no_height),
-        use_color=args.use_color, 
-        use_normal=args.use_normal, 
-        use_multiview=args.use_multiview,
-        norm_length=False
-    )
+    if not args.scannet:
+        dataset = ScannetReferenceDataset(
+            scanrefer=scanrefer[split],
+            scanrefer_all_scene=all_scene_list,
+            split=split,
+            num_points=args.num_points,
+            use_height=(not args.no_height),
+            use_color=args.use_color,
+            use_normal=args.use_normal,
+            use_multiview=args.use_multiview,
+            norm_length=False
+        )
+    else:
+        dataset = ScannetPretrainDataset(
+            scanrefer=scanrefer[split],
+            scanrefer_all_scene=all_scene_list,
+            split=split,
+            num_points=args.num_points,
+            use_height=(not args.no_height),
+            use_color=args.use_color,
+            use_normal=args.use_normal,
+            use_multiview=args.use_multiview
+        )
     # dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
 
@@ -56,7 +68,7 @@ def get_num_params(model):
 def get_solver(args, dataloader, stamp):
     model = get_model(args)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    solver = SolverPretrain(model, DC, dataloader, optimizer, stamp, args.val_step, early_stopping=5)
+    solver = SolverPretrain(model, DC, dataloader, optimizer, stamp, args.val_step, early_stopping=args.es)
     num_params = get_num_params(model)
 
     return solver, num_params
@@ -146,6 +158,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_color', action='store_true', help='Use RGB color in input.')
     parser.add_argument('--use_normal', action='store_true', help='Use RGB color in input.')
     parser.add_argument('--use_multiview', action='store_true', help='Use multiview images.')
+    parser.add_argument("--scannet", action="store_true", help="Use raw Scannet instead of ScanRefer for pretraining.")
     args = parser.parse_args()
 
     # setting
