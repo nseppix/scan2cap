@@ -442,3 +442,12 @@ def pointnet_pretrain_loss(data_dict):
     data_dict["scores"] = preds
 
     return loss, data_dict
+
+def caption_loss(data_dict):
+    targets = data_dict["sorted_targets"]
+    scores = data_dict["sorted_scores"]
+    loss = nn.CrossEntropyLoss(scores, targets)
+    data_dict["loss"] = loss 
+    return loss, data_dict
+
+

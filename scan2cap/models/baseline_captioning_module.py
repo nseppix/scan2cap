@@ -23,11 +23,10 @@ class Decoder(nn.Module):
         self.encoder_dim = encoder_dim
         self.embed_dim = embed_dim
         self.decoder_dim = decoder_dim
-        self.vocab_size = vocab_size
+        self.vocab_size = vocabulary.size(0)
         self.dropout = dropout
-
         
-        self.embedding = nn.Embedding(vocab_size, embed_dim)  # embedding layer
+
         self.dropout = nn.Dropout(p=self.dropout)
         self.decode_step = nn.LSTMCell(embed_dim + encoder_dim, decoder_dim, bias=True)  # decoding LSTMCell
         self.init_h = nn.Linear(encoder_dim, decoder_dim)  # linear layer to find initial hidden state of LSTMCell
@@ -41,26 +40,9 @@ class Decoder(nn.Module):
         """
         Initializes some parameters with values from the uniform distribution, for easier convergence.
         """
-        self.embedding.weight.data.uniform_(-0.1, 0.1)
         self.fc.bias.data.fill_(0)
         self.fc.weight.data.uniform_(-0.1, 0.1)
 
-    def load_pretrained_embeddings(self, embeddings):
-        """
-        Loads embedding layer with pre-trained embeddings.
-
-        :param embeddings: pre-trained embeddings
-        """
-        self.embedding.weight = nn.Parameter(embeddings)
-
-    def fine_tune_embeddings(self, fine_tune=True):
-        """
-        Allow fine-tuning of embedding layer? (Only makes sense to not-allow if using pre-trained embeddings).
-
-        :param fine_tune: Allow?
-        """
-        for p in self.embedding.parameters():
-            p.requires_grad = fine_tune
 
     def init_hidden_state(self, encoder_out):
         """
@@ -74,7 +56,7 @@ class Decoder(nn.Module):
         c = self.init_c(mean_encoder_out)
         return h, c
 
-    def forward(self, data_dict):
+    def forward(self, data_dict, mode):
         """
         Forward propagation.
 
@@ -84,41 +66,46 @@ class Decoder(nn.Module):
         :return: scores for vocabulary, sorted encoded captions, decode lengths, weights, sort indices
         """
         encoder_out = data_dict["ref_obj_features"]
-        encoded_captions = data_dict["lang_feat"]
+        embedded_captions = data_dict["lang_feat"]
         caption_lengths = data_dict["lang_len"]
         batch_size = encoder_out.size(0)
         encoder_dim = encoder_out.size(-1)
         vocab_size = self.vocab_size
+        
+        if mode == "train":
+            
+            # Sort input data by decreasing lengths; why? apparent below
+            caption_lengths, sort_ind = caption_lengths.squeeze(1).sort(dim=0, descending=True)
+            encoder_out = encoder_out[sort_ind]
+            encoded_captions = embedded_captions[sort_ind]
 
-        # Sort input data by decreasing lengths; why? apparent below
-        # here I need to adapt the code
-        caption_lengths, sort_ind = caption_lengths.squeeze(1).sort(dim=0, descending=True)
-        encoder_out = encoder_out[sort_ind]
-        encoded_captions = encoded_captions[sort_ind]
 
-        # Embedding
-        embeddings = self.embedding(    )  # (batch_size, max_caption_length, embed_dim)
+            # Initialize LSTM state
+            h, c = self.init_hidden_state(encoder_out)  # (batch_size, decoder_dim)
+            #preds = self.fc(self.dropout(h))
+            #emb_h = self.vocabulary[preds.max(1)]
+            # We won't decode at the <end> position, since we've finished generating as soon as we generate <end>
+            # So, decoding lengths are actual lengths - 1
+            decode_lengths = (caption_lengths - 1).tolist()
 
-        # Initialize LSTM state
-        h, c = self.init_hidden_state(encoder_out)  # (batch_size, decoder_dim)
+            # Create tensors to hold word predicion scores and alphas
+            predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size).to(device)
 
-        # We won't decode at the <end> position, since we've finished generating as soon as we generate <end>
-        # So, decoding lengths are actual lengths - 1
-        decode_lengths = (caption_lengths - 1).tolist()
+            # At each time-step, decode by
+            # then generate a new word in the decoder with the previous word
+            for t in range(max(decode_lengths)):
+                batch_size_t = sum([l > t for l in decode_lengths])
+                
+                h, c = self.decode_step(
+                    torch.cat([embedded_captions[:batch_size_t, t, :], encoder_out[:batch_size_t], dim=1),
+                    (h[:batch_size_t], c[:batch_size_t]))  # (batch_size_t, decoder_dim)
+                preds = self.fc(self.dropout(h))  # (batch_size_t, vocab_size)
+                predictions[:batch_size_t, t, :] = preds
 
-        # Create tensors to hold word predicion scores and alphas
-        predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size).to(device)
-
-        # At each time-step, decode by
-        # then generate a new word in the decoder with the previous word
-        for t in range(max(decode_lengths)):
-            batch_size_t = sum([l > t for l in decode_lengths])
-            h, c = self.decode_step(
-                torch.cat((h[:batch_size_t], c[:batch_size_t]))  # (batch_size_t, decoder_dim)
-            preds = self.fc(self.dropout(h))  # (batch_size_t, vocab_size)
-            predictions[:batch_size_t, t, :] = preds
-
-        data_dict["caption_predictions"]=predictions
-    
+            data_dict["caption_predictions"] = predictions
+            data_dict["sort_ind_captioning"] = sort_ind
+        
+        else:
+            # here I would do the evaluate forward
 
         return data_dict
