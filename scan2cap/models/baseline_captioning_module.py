@@ -74,16 +74,18 @@ class Decoder(nn.Module):
         c = self.init_c(mean_encoder_out)
         return h, c
 
-    def forward(self, encoder_out, encoded_captions, caption_lengths):
+    def forward(self, data_dict):
         """
         Forward propagation.
 
-        :param encoder_out: encoded images, a tensor of dimension (batch_size, enc_image_size, enc_image_size, encoder_dim)
+        :param encoder_out: encoded images, a tensor of dimension (batch_size, enc_scene_size)
         :param encoded_captions: encoded captions, a tensor of dimension (batch_size, max_caption_length)
         :param caption_lengths: caption lengths, a tensor of dimension (batch_size, 1)
         :return: scores for vocabulary, sorted encoded captions, decode lengths, weights, sort indices
         """
-
+        encoder_out = data_dict["ref_obj_features"]
+        encoded_captions = data_dict["lang_feat"]
+        caption_lengths = data_dict["lang_len"]
         batch_size = encoder_out.size(0)
         encoder_dim = encoder_out.size(-1)
         vocab_size = self.vocab_size
@@ -95,7 +97,7 @@ class Decoder(nn.Module):
         encoded_captions = encoded_captions[sort_ind]
 
         # Embedding
-        embeddings = self.embedding(encoded_captions)  # (batch_size, max_caption_length, embed_dim)
+        embeddings = self.embedding(    )  # (batch_size, max_caption_length, embed_dim)
 
         # Initialize LSTM state
         h, c = self.init_hidden_state(encoder_out)  # (batch_size, decoder_dim)
@@ -108,13 +110,15 @@ class Decoder(nn.Module):
         predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size).to(device)
 
         # At each time-step, decode by
-        # then generate a new word in the decoder with the previous word and the attention weighted encoding
+        # then generate a new word in the decoder with the previous word
         for t in range(max(decode_lengths)):
             batch_size_t = sum([l > t for l in decode_lengths])
             h, c = self.decode_step(
-                torch.cat([embeddings[:batch_size_t, t, :], (h[:batch_size_t], c[:batch_size_t]))  # (batch_size_t, decoder_dim)
+                torch.cat((h[:batch_size_t], c[:batch_size_t]))  # (batch_size_t, decoder_dim)
             preds = self.fc(self.dropout(h))  # (batch_size_t, vocab_size)
             predictions[:batch_size_t, t, :] = preds
+
+        data_dict["caption_predictions"]=predictions
     
 
-        return predictions, encoded_captions, decode_lengths, alphas, sort_ind
+        return data_dict
