@@ -75,7 +75,8 @@ class Decoder(nn.Module):
         if mode == "train":
             
             # Sort input data by decreasing lengths; why? apparent below
-            caption_lengths, sort_ind = caption_lengths.squeeze(1).sort(dim=0, descending=True)
+            # caption_lengths, sort_ind = caption_lengths.squeeze(1).sort(dim=0, descending=True)
+            caption_lengths, sort_ind = torch.IntTensor(lens).sort(0, descending=True)
             encoder_out = encoder_out[sort_ind]
             encoded_captions = embedded_captions[sort_ind]
 
@@ -102,9 +103,11 @@ class Decoder(nn.Module):
                 preds = self.fc(self.dropout(h))  # (batch_size_t, vocab_size)
                 predictions[:batch_size_t, t, :] = preds
 
+            #now we need to resort the output into its initial order
+            _, orig_idx = sort_ind.sort(0)
+            predictions_resorted = predictions[orig_idx]
             data_dict["caption_predictions"] = predictions
-            data_dict["sort_ind_captioning"] = sort_ind
-        
+            
         else:
             # here I would do the evaluate forward
 
