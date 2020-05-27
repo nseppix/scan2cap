@@ -27,6 +27,7 @@ MEAN_COLOR_RGB = np.array([109.8, 97.2, 83.8])
 # data path
 SCANNET_V2_TSV = os.path.join(CONF.PATH.SCANNET_META, "scannetv2-labels.combined.tsv")
 MULTIVIEW_DATA = os.path.join(CONF.PATH.SCANNET_DATA, "enet_feats.hdf5")
+MAX_DIFF_ANNS = 5
 # MAX_DES_LEN = 30
 # MAX_DES_LEN = 117
 
@@ -75,6 +76,15 @@ class Scan2CapDataset(Dataset):
 
         lang_indices = np.zeros((CONF.TRAIN.MAX_DES_LEN)) - 1
         lang_indices[:lang_len] = np.array([self.vocab2index[t] for t in lang_tokens[:lang_len]])
+
+        other_ann_ids = self.different_annotations[(scene_id, object_id)]
+        other_lang_lens = np.zeros((MAX_DIFF_ANNS))
+        other_lang_lens[:len(other_ann_ids)] = np.array([min(len(self.scanrefer[o_id]["token"]), CONF.TRAIN.MAX_DES_LEN) for o_id in other_ann_ids])
+        other_lang_indices = np.zeros((MAX_DIFF_ANNS, CONF.TRAIN.MAX_DES_LEN)) - 1
+        for i, o_id in enumerate(other_ann_ids):
+            o_tokens = self.scanrefer[o_id]["token"]
+            o_len = len(o_tokens)
+            other_lang_indices[i, :o_len] = np.array([self.vocab2index[t] for t in o_tokens[:o_len]])
 
         # get pc
         mesh_vertices = self.scene_data[scene_id]["mesh_vertices"]
@@ -155,6 +165,8 @@ class Scan2CapDataset(Dataset):
         if self.lang_tokens:
             data_dict["lang_tokens"] = lang_tokens
         data_dict["lang_len"] = np.array(lang_len).astype(np.int64) # length of each description
+        data_dict["other_lang_indices"] = other_lang_indices.astype(np.int64)
+        data_dict["other_lang_lens"] = other_lang_lens.astype(np.int64)
         data_dict["pcl_color"] = pcl_color
         data_dict["ref_box_label"] = target_bboxes.astype(np.int64) # 0/1 reference labels for each object bbox
         data_dict["ref_center_label"] = target_bboxes[0, :3].astype(np.float32)
@@ -192,6 +204,10 @@ class Scan2CapDataset(Dataset):
         print("loading data...")
         # add scannet data
         self.scene_list = sorted(list(set([data["scene_id"] for data in self.scanrefer])))
+
+        self.different_annotations = defaultdict(lambda: [])
+        for i, data in enumerate(self.scanrefer):
+            self.different_annotations[(data["scene_id"], data["object_id"])] += [data["ann_id"]]
 
         # load scene data
         self.scene_data = {}
