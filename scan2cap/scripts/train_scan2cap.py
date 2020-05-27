@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import pickle
 import sys
 from datetime import datetime
 
@@ -8,64 +9,60 @@ import numpy as np
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from lib.scannet_cls_dataset import ScannetPretrainDataset
+from lib.scan2cap_dataset import Scan2CapDataset
 from lib.solver_pretrain import SolverPretrain
-from models.pointnet_extractor_module import PointNetExtractor
+from models.scan2cap_model import Scan2CapModel
 
-sys.path.append(os.path.join(os.getcwd())) # HACK add the root folder
+sys.path.append(os.path.join(os.getcwd()))  # HACK add the root folder
 from data.scannet.model_util_scannet import ScannetDatasetConfig
-from lib.dataset import ScannetReferenceDataset
 from lib.config import CONF
 
 SCANREFER_TRAIN = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_train.json")))
 SCANREFER_VAL = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_val.json")))
 
+GLOVE_PICKLE = os.path.join(CONF.PATH.DATA, "glove.p")
+VOCABULARY = json.load(open(os.path.join(CONF.PATH.DATA, "vocabulary.json"), "r"))
+
 # constants
 DC = ScannetDatasetConfig()
 
+
 def get_dataloader(args, scanrefer, all_scene_list, split, config, augment):
-    if not args.scannet:
-        dataset = ScannetReferenceDataset(
-            scanrefer=scanrefer[split],
-            scanrefer_all_scene=all_scene_list,
-            split=split,
-            num_points=args.num_points,
-            use_height=(not args.no_height),
-            use_color=args.use_color,
-            use_normal=args.use_normal,
-            use_multiview=args.use_multiview,
-            augment=augment,
-            norm_length=False
-        )
-    else:
-        dataset = ScannetPretrainDataset(
-            scanrefer=scanrefer[split],
-            scanrefer_all_scene=all_scene_list,
-            split=split,
-            num_points=args.num_points,
-            use_height=(not args.no_height),
-            use_color=args.use_color,
-            use_normal=args.use_normal,
-            use_multiview=args.use_multiview,
-            augment=augment
-        )
+    dataset = Scan2CapDataset(
+        scanrefer=scanrefer[split],
+        scanrefer_all_scene=all_scene_list,
+        vocabulary=VOCABULARY,
+        split=split,
+        num_points=args.num_points,
+        use_height=(not args.no_height),
+        use_color=args.use_color,
+        use_normal=args.use_normal,
+        use_multiview=args.use_multiview,
+        augment=augment
+    )
     # dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
 
     return dataset, dataloader
 
-def get_model(args):
-    # initiate model
-    input_channels = int(args.use_multiview) * 128 + int(args.use_normal) * 3 + int(args.use_color) * 3 + int(not args.no_height)
-    model = PointNetExtractor(pretrain_mode=True, feature_channels=input_channels).cuda()
 
+def get_model(args):
+    with open(GLOVE_PICKLE, "rb") as f:
+        glove = pickle.load(f)
+    # initiate model
+    input_channels = int(args.use_multiview) * 128 + int(args.use_normal) * 3 + int(args.use_color) * 3 + int(
+        not args.no_height)
+    model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels).cuda()
+    del glove
     return model
+
 
 def get_num_params(model):
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     num_params = int(sum([np.prod(p.size()) for p in model_parameters]))
 
     return num_params
+
 
 def get_solver(args, dataloader, stamp):
     model = get_model(args)
@@ -75,11 +72,12 @@ def get_solver(args, dataloader, stamp):
 
     return solver, num_params
 
+
 def save_info(args, root, num_params, train_dataset, val_dataset):
     info = {}
     for key, value in vars(args).items():
         info[key] = value
-    
+
     info["num_train"] = len(train_dataset)
     info["num_val"] = len(val_dataset)
     info["num_train_scenes"] = len(train_dataset.scene_list)
@@ -89,15 +87,16 @@ def save_info(args, root, num_params, train_dataset, val_dataset):
     with open(os.path.join(root, "info.json"), "w") as f:
         json.dump(info, f, indent=4)
 
+
 def get_scanrefer(scanrefer_train, scanrefer_val, num_scenes):
     # randomly choose scenes
     train_scene_list = sorted(list(set([data["scene_id"] for data in scanrefer_train])))
     val_scene_list = sorted(list(set([data["scene_id"] for data in scanrefer_val])))
-    if num_scenes == -1: 
+    if num_scenes == -1:
         num_scenes = len(train_scene_list)
     else:
         assert len(train_scene_list) >= num_scenes
-    
+
     # slice train_scene_list
     train_scene_list = train_scene_list[:num_scenes]
 
@@ -112,6 +111,7 @@ def get_scanrefer(scanrefer_train, scanrefer_val, num_scenes):
 
     return new_scanrefer_train, scanrefer_val, all_scene_list
 
+
 def train(args):
     # init training dataset
     print("preparing data...")
@@ -125,7 +125,7 @@ def train(args):
     train_dataset, train_dataloader = get_dataloader(args, scanrefer, all_scene_list, "train", DC, True)
 
     val_dataset, val_dataloader = get_dataloader(args, scanrefer, all_scene_list, "val", DC, False)
-    
+
     dataloader = {
         "train": train_dataloader,
         "val": val_dataloader
@@ -133,7 +133,7 @@ def train(args):
 
     print("initializing...")
     stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    if args.tag: stamp += "_"+args.tag.upper()
+    if args.tag: stamp += "_" + args.tag.upper()
     root = os.path.join(CONF.PATH.OUTPUT, stamp)
     os.makedirs(root, exist_ok=True)
     solver, num_params = get_solver(args, dataloader, stamp)
@@ -141,6 +141,7 @@ def train(args):
     print("Start training...\n")
     save_info(args, root, num_params, train_dataset, val_dataset)
     solver(args.epoch, args.verbose)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -160,7 +161,6 @@ if __name__ == "__main__":
     parser.add_argument('--use_color', action='store_true', help='Use RGB color in input.')
     parser.add_argument('--use_normal', action='store_true', help='Use RGB color in input.')
     parser.add_argument('--use_multiview', action='store_true', help='Use multiview images.')
-    parser.add_argument("--scannet", action="store_true", help="Use raw Scannet instead of ScanRefer for pretraining.")
     args = parser.parse_args()
 
     # setting
@@ -168,4 +168,4 @@ if __name__ == "__main__":
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
     train(args)
-    
+
