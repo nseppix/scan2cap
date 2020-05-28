@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import numpy as np
 import torchvision
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -10,7 +11,7 @@ class Decoder(nn.Module):
     Decoder.
     """
 
-    def __init__(self, embed_dim=300, decoder_dim, vocab_size, encoder_dim=556, dropout=0.5):
+    def __init__(self, vocab_list, embedding_dict, embed_dim=300, encoder_dim=256, decoder_dim=512, dropout=0.5):
         """
         :param embed_dim: embedding size
         :param decoder_dim: size of decoder's RNN
@@ -23,17 +24,19 @@ class Decoder(nn.Module):
         self.encoder_dim = encoder_dim
         self.embed_dim = embed_dim
         self.decoder_dim = decoder_dim
-        self.vocab_size = vocabulary.size(0)
         self.dropout = dropout
-        
+
+        self.vocab_size = len(vocab_list)
+        embedding_dict["<end>"] = np.zeros(self.embed_dim)
+        self.idx2embedding = nn.Parameter(torch.stack([torch.tensor(embedding_dict[word]) for word in vocab_list]))
 
         self.dropout = nn.Dropout(p=self.dropout)
-        self.decode_step = nn.LSTMCell(embed_dim + encoder_dim, decoder_dim, bias=True)  # decoding LSTMCell
-        self.init_h = nn.Linear(encoder_dim, decoder_dim)  # linear layer to find initial hidden state of LSTMCell
-        self.init_c = nn.Linear(encoder_dim, decoder_dim)  # linear layer to find initial cell state of LSTMCell
-        self.f_beta = nn.Linear(decoder_dim, encoder_dim)  # linear layer to create a sigmoid-activated gate
+        self.decode_step = nn.LSTMCell(self.embed_dim + self.encoder_dim, self.decoder_dim, bias=True)  # decoding LSTMCell
+        self.init_h = nn.Linear(self.encoder_dim, self.decoder_dim)  # linear layer to find initial hidden state of LSTMCell
+        self.init_c = nn.Linear(self.encoder_dim, self.decoder_dim)  # linear layer to find initial cell state of LSTMCell
+        self.f_beta = nn.Linear(self.decoder_dim, self.encoder_dim)  # linear layer to create a sigmoid-activated gate
         self.sigmoid = nn.Sigmoid()
-        self.fc = nn.Linear(decoder_dim, vocab_size)  # linear layer to find scores over vocabulary
+        self.fc = nn.Linear(self.decoder_dim, self.vocab_size)  # linear layer to find scores over vocabulary
         self.init_weights()  # initialize some layers with the uniform distribution
 
     def init_weights(self):

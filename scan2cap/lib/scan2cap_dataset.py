@@ -11,6 +11,7 @@ import json
 import pickle
 import numpy as np
 import multiprocessing as mp
+from collections import defaultdict
 from torch.utils.data import Dataset
 
 sys.path.append(os.path.join(os.getcwd(), "lib")) # HACK add the lib folder
@@ -26,25 +27,25 @@ MEAN_COLOR_RGB = np.array([109.8, 97.2, 83.8])
 # data path
 SCANNET_V2_TSV = os.path.join(CONF.PATH.SCANNET_META, "scannetv2-labels.combined.tsv")
 MULTIVIEW_DATA = os.path.join(CONF.PATH.SCANNET_DATA, "enet_feats.hdf5")
-GLOVE_PICKLE = os.path.join(CONF.PATH.DATA, "glove.p")
-VOCAB_LIST = os.path.join(CONF.PATH.DATA, "vocabulary.json")
+MAX_DIFF_ANNS = 5
 # MAX_DES_LEN = 30
 # MAX_DES_LEN = 117
 
 class Scan2CapDataset(Dataset):
        
-    def __init__(self, scanrefer, scanrefer_all_scene, 
-        split="train", 
-        num_points=40000,
-        use_height=False, 
-        use_color=False, 
-        use_normal=False, 
-        use_multiview=False, 
-        augment=False,
-        lang_tokens=False):
+    def __init__(self, scanrefer, scanrefer_all_scene, vocabulary,
+                 split="train",
+                 num_points=40000,
+                 use_height=False,
+                 use_color=False,
+                 use_normal=False,
+                 use_multiview=False,
+                 augment=False,
+                 lang_tokens=False):
 
         self.scanrefer = scanrefer
         self.scanrefer_all_scene = scanrefer_all_scene # all scene_ids in scanrefer
+        self.index2vocab = vocabulary
         self.split = split
         self.num_points = num_points
         self.use_color = use_color        
@@ -70,9 +71,20 @@ class Scan2CapDataset(Dataset):
         
         # get language features
         lang_tokens = self.scanrefer[idx]["token"]
-        lang_indices = np.array([self.vocab2index[t] for t in lang_tokens])
-        lang_len = len(self.scanrefer[idx]["token"])
+        lang_len = len(lang_tokens)
         lang_len = lang_len if lang_len <= CONF.TRAIN.MAX_DES_LEN else CONF.TRAIN.MAX_DES_LEN
+
+        lang_indices = np.zeros((CONF.TRAIN.MAX_DES_LEN)) - 1
+        lang_indices[:lang_len] = np.array([self.vocab2index[t] for t in lang_tokens[:lang_len]])
+
+        other_ann_ids = self.different_annotations[(scene_id, object_id)]
+        other_lang_lens = np.zeros((MAX_DIFF_ANNS))
+        other_lang_lens[:len(other_ann_ids)] = np.array([min(len(self.scanrefer[o_id]["token"]), CONF.TRAIN.MAX_DES_LEN) for o_id in other_ann_ids])
+        other_lang_indices = np.zeros((MAX_DIFF_ANNS, CONF.TRAIN.MAX_DES_LEN)) - 1
+        for i, o_id in enumerate(other_ann_ids):
+            o_tokens = self.scanrefer[o_id]["token"]
+            o_len = len(o_tokens)
+            other_lang_indices[i, :o_len] = np.array([self.vocab2index[t] for t in o_tokens[:o_len]])
 
         # get pc
         mesh_vertices = self.scene_data[scene_id]["mesh_vertices"]
@@ -147,15 +159,18 @@ class Scan2CapDataset(Dataset):
             point_cloud, target_bboxes = self._translate(point_cloud, target_bboxes)
 
         data_dict = {}
+        data_dict["scan_idx"] = np.array(idx).astype(np.int64)
         data_dict["point_clouds"] = point_cloud.astype(np.float32) # point cloud data including features
         data_dict["lang_indices"] = lang_indices.astype(np.int64)
         if self.lang_tokens:
             data_dict["lang_tokens"] = lang_tokens
         data_dict["lang_len"] = np.array(lang_len).astype(np.int64) # length of each description
+        data_dict["other_lang_indices"] = other_lang_indices.astype(np.int64)
+        data_dict["other_lang_lens"] = other_lang_lens.astype(np.int64)
         data_dict["pcl_color"] = pcl_color
         data_dict["ref_box_label"] = target_bboxes.astype(np.int64) # 0/1 reference labels for each object bbox
-        data_dict["ref_center_label"] = target_bboxes[:3].astype(np.float32)
-        data_dict["ref_size_residual_label"] = target_bboxes[3:6].astype(np.float32)
+        data_dict["ref_center_label"] = target_bboxes[0, :3].astype(np.float32)
+        data_dict["ref_size_residual_label"] = target_bboxes[0, 3:6].astype(np.float32)
         data_dict["ref_nyu40_label"] = np.array(int(class_label)).astype(np.int64)
         data_dict["object_id"] = np.array(int(object_id)).astype(np.int64)
         data_dict["ann_id"] = np.array(int(ann_id)).astype(np.int64)
@@ -190,6 +205,10 @@ class Scan2CapDataset(Dataset):
         # add scannet data
         self.scene_list = sorted(list(set([data["scene_id"] for data in self.scanrefer])))
 
+        self.different_annotations = defaultdict(lambda: [])
+        for i, data in enumerate(self.scanrefer):
+            self.different_annotations[(data["scene_id"], data["object_id"])] += [data["ann_id"]]
+
         # load scene data
         self.scene_data = {}
         for scene_id in self.scene_list:
@@ -197,8 +216,7 @@ class Scan2CapDataset(Dataset):
             self.scene_data[scene_id]["mesh_vertices"] = np.load(os.path.join(CONF.PATH.SCANNET_DATA, scene_id)+"_vert.npy")
             self.scene_data[scene_id]["instance_bboxes"] = np.load(os.path.join(CONF.PATH.SCANNET_DATA, scene_id)+"_bbox.npy")
 
-        self.index2vocab = json.load(open(VOCAB_LIST, "r"))
-        self.vocab2index = {v: i for i, v in enumerate(self.index2vocab)}
+        self.vocab2index = defaultdict(lambda : 0, {v: i for i, v in enumerate(self.index2vocab)})
 
         # prepare class mapping
         lines = [line.rstrip() for line in open(SCANNET_V2_TSV)]

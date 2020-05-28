@@ -136,6 +136,7 @@ class ScannetPretrainDataset(Dataset):
             point_cloud, target_bboxes = self._translate(point_cloud, target_bboxes)
 
         data_dict = {}
+        data_dict["scan_idx"] = np.array(idx).astype(np.int64)
         data_dict["point_clouds"] = point_cloud.astype(np.float32)  # point cloud data including features
         data_dict["ref_center_label"] = target_bboxes[0, :3].astype(np.float32)
         data_dict["ref_size_residual_label"] = target_bboxes[0, 3:6].astype(np.float32)
