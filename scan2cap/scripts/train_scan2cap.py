@@ -22,6 +22,7 @@ SCANREFER_VAL = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_
 
 GLOVE_PICKLE = os.path.join(CONF.PATH.DATA, "glove.p")
 VOCABULARY = json.load(open(os.path.join(CONF.PATH.DATA, "vocabulary.json"), "r"))
+VOCABULARY = ["<end>"] + VOCABULARY
 
 # constants
 DC = ScannetDatasetConfig()

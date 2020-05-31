@@ -438,7 +438,7 @@ def pointnet_pretrain_loss(data_dict):
     target = data_dict["ref_nyu40_label"]
     scores = data_dict["ref_obj_cls_scores"]
     probs = F.softmax(scores, dim=1)
-    loss = F.cross_entropy(probs, target-1)
+    loss = F.cross_entropy(probs, target-1, weight=data_dict["class_weights"])
     data_dict["loss"] = loss
 
     _, preds = torch.max(scores, dim=1)

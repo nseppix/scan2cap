@@ -86,7 +86,7 @@ class ScannetDatasetConfig(object):
         self.class2type = {self.type2class[t]:t for t in self.type2class}
 
         self.nyu40ids = np.array([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]) # exclude wall (1), floor (2), ceiling (22)
-        self.nyu40id2class = self._get_nyu40id2class()
+        self.nyu40id2class, self.nyu40id2label = self._get_nyu40id2class()
         self.mean_size_arr = np.load(os.path.join(CONF.PATH.SCANNET, 'meta_data/scannet_reference_means.npz'))['arr_0']
 
         self.num_class = len(self.type2class.keys())
@@ -101,18 +101,20 @@ class ScannetDatasetConfig(object):
         lines = [line.rstrip() for line in open(os.path.join(CONF.PATH.SCANNET, 'meta_data/scannetv2-labels.combined.tsv'))]
         lines = lines[1:]
         nyu40ids2class = {}
+        nyu40ids2label = {}
         for i in range(len(lines)):
             label_classes_set = set(self.type2class.keys())
             elements = lines[i].split('\t')
             nyu40_id = int(elements[4])
             nyu40_name = elements[7]
+            nyu40ids2label[nyu40_id] = nyu40_name
             if nyu40_id in self.nyu40ids:
                 if nyu40_name not in label_classes_set:
                     nyu40ids2class[nyu40_id] = self.type2class["others"]
                 else:
                     nyu40ids2class[nyu40_id] = self.type2class[nyu40_name]
 
-        return nyu40ids2class
+        return nyu40ids2class, nyu40ids2label
 
     def angle2class(self, angle):
         ''' Convert continuous angle to discrete class

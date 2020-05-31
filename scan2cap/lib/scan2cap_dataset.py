@@ -41,7 +41,8 @@ class Scan2CapDataset(Dataset):
                  use_normal=False,
                  use_multiview=False,
                  augment=False,
-                 lang_tokens=False):
+                 lang_tokens=False,
+                 class_weights=None):
 
         self.scanrefer = scanrefer
         self.scanrefer_all_scene = scanrefer_all_scene # all scene_ids in scanrefer
@@ -54,11 +55,12 @@ class Scan2CapDataset(Dataset):
         self.use_multiview = use_multiview
         self.augment = augment
         self.lang_tokens = lang_tokens
+        self.class_weights = class_weights
 
         # load data
         self._load_data()
         self.multiview_data = {}
-       
+
     def __len__(self):
         return len(self.scanrefer)
 
@@ -175,6 +177,7 @@ class Scan2CapDataset(Dataset):
         data_dict["object_id"] = np.array(int(object_id)).astype(np.int64)
         data_dict["ann_id"] = np.array(int(ann_id)).astype(np.int64)
         data_dict["object_cat"] = np.array(self.raw2label[object_name]).astype(np.int64)
+        data_dict["class_weights"] = self.class_weights
         data_dict["pcl_color"] = pcl_color
         data_dict["load_time"] = time.time() - start
 
@@ -207,7 +210,7 @@ class Scan2CapDataset(Dataset):
 
         self.different_annotations = defaultdict(lambda: [])
         for i, data in enumerate(self.scanrefer):
-            self.different_annotations[(data["scene_id"], data["object_id"])] += [data["ann_id"]]
+            self.different_annotations[(data["scene_id"], data["object_id"])] += [i]
 
         # load scene data
         self.scene_data = {}
@@ -217,6 +220,12 @@ class Scan2CapDataset(Dataset):
             self.scene_data[scene_id]["instance_bboxes"] = np.load(os.path.join(CONF.PATH.SCANNET_DATA, scene_id)+"_bbox.npy")
 
         self.vocab2index = defaultdict(lambda : 0, {v: i for i, v in enumerate(self.index2vocab)})
+
+        if self.class_weights is not None:
+            l = len(self.scanrefer)
+            self.class_weights = np.array([1 / self.class_weights[str(i)] if str(i) in self.class_weights else 1 for i in range(1, 41, 1)], dtype=np.float32)
+        else:
+            self.class_weights = np.array([1 for i in range(40)], dtype=np.float32)
 
         # prepare class mapping
         lines = [line.rstrip() for line in open(SCANNET_V2_TSV)]

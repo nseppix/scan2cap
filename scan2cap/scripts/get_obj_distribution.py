@@ -2,7 +2,7 @@ import json
 import os
 from tqdm import tqdm
 
-from collections import Set
+from collections import Counter
 
 from lib.config import CONF
 from lib.scan2cap_dataset import Scan2CapDataset
@@ -10,7 +10,7 @@ from lib.scan2cap_dataset import Scan2CapDataset
 SCANREFER_TRAIN = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_train.json")))
 SCANREFER_VAL = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_val.json")))
 
-OUT_FILE = os.path.join(CONF.PATH.DATA, "vocabulary.json")
+OUT_FILE = os.path.join(CONF.PATH.DATA, "distribution.json")
 
 
 def get_scanrefer(scanrefer_train, scanrefer_val, num_scenes):
@@ -57,12 +57,7 @@ dataset = Scan2CapDataset(
     lang_tokens=True
 )
 
-vocabulary = {"unk"}
+object_ids = [s["ref_nyu40_label"].item() for s in tqdm(dataset)]
+distribution = Counter(object_ids)
 
-for i in tqdm(range(len(dataset))):
-    sample = dataset.__getitem__(i)
-    vocabulary.update(list(sample["lang_tokens"]))
-
-vocabulary = sorted(list(vocabulary))
-
-json.dump(vocabulary, open(OUT_FILE, "w+"), indent=4)
+json.dump(dict(distribution), open(OUT_FILE, "w+"), indent=4)

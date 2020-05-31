@@ -8,11 +8,14 @@ import numpy as np
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
+sys.path.append(os.path.join(os.getcwd()))
+
+from lib.scan2cap_dataset import Scan2CapDataset
 from lib.scannet_cls_dataset import ScannetPretrainDataset
 from lib.solver_pretrain import SolverPretrain
 from models.pointnet_extractor_module import PointNetExtractor
 
-sys.path.append(os.path.join(os.getcwd())) # HACK add the root folder
+# HACK add the root folder
 from data.scannet.model_util_scannet import ScannetDatasetConfig
 from lib.dataset import ScannetReferenceDataset
 from lib.config import CONF
@@ -20,14 +23,17 @@ from lib.config import CONF
 SCANREFER_TRAIN = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_train.json")))
 SCANREFER_VAL = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_val.json")))
 
+CLASS_WEIGHTS = json.load(open(os.path.join(CONF.PATH.DATA, "distribution.json")))
+
 # constants
 DC = ScannetDatasetConfig()
 
 def get_dataloader(args, scanrefer, all_scene_list, split, config, augment):
     if not args.scannet:
-        dataset = ScannetReferenceDataset(
+        dataset = Scan2CapDataset(
             scanrefer=scanrefer[split],
             scanrefer_all_scene=all_scene_list,
+            vocabulary=[],
             split=split,
             num_points=args.num_points,
             use_height=(not args.no_height),
@@ -35,7 +41,7 @@ def get_dataloader(args, scanrefer, all_scene_list, split, config, augment):
             use_normal=args.use_normal,
             use_multiview=args.use_multiview,
             augment=augment,
-            norm_length=False
+            class_weights=CLASS_WEIGHTS if not args.no_class_weight else None
         )
     else:
         dataset = ScannetPretrainDataset(
@@ -161,6 +167,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_normal', action='store_true', help='Use RGB color in input.')
     parser.add_argument('--use_multiview', action='store_true', help='Use multiview images.')
     parser.add_argument("--scannet", action="store_true", help="Use raw Scannet instead of ScanRefer for pretraining.")
+    parser.add_argument("--no_class_weight", action="store_true", help="Don't use class weights in pretraining.")
     args = parser.parse_args()
 
     # setting
