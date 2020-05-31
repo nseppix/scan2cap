@@ -16,6 +16,12 @@ from lib.ap_helper import parse_predictions
 from lib.loss import SoftmaxRankingLoss
 from utils.box_util import get_3d_box, get_3d_box_batch, box3d_iou, box3d_iou_batch
 
+from utils.bleu.bleu import Bleu
+from utils.meteor.meteor import Meteor
+from utils.rouge.rouge import Rouge
+from utils.cider.cider import Cider
+
+
 FAR_THRESHOLD = 0.6
 NEAR_THRESHOLD = 0.3
 GT_VOTE_FACTOR = 3 # number of GT votes per point
@@ -446,7 +452,7 @@ def pointnet_pretrain_loss(data_dict):
 def caption_loss(data_dict, idx2emmbedding):
 
     targets = data_dict["lang_indices"] 
-    references = np.array([targets, data_dict["other_lang_indices"]]) #remove -1 one here
+    
     scores = data_dict["caption_predictions"] 
 
     scores, _ = pack_padded_sequence(scores, data_dict["lang_len"], batch_first=True)
@@ -455,14 +461,27 @@ def caption_loss(data_dict, idx2emmbedding):
     loss = F.cross_entropy(scores, targets)
     data_dict["loss"] = loss
 
+    references = {}
+    hypotheses = {}
+
+    hypo = torch.argmax(scores, dim=2)
+
+    for i in range(data_dict.size(0)):
+        references["i"] = [targets[i].append(data_dict["other_lang_indices"][i])
+        hypotheses["i"] = hypo[i]
+
+    
     # add here the part to calculate the the scores 
-    bleu4 = corpus_bleu(references, hypotheses)
+    bleu4, _ = Bleu(4).compute_score(references, hypotheses)
+    meteor, _ = Meteor().compute_score(references, hypotheses)
+    rouge, _ = Rouge().compute_score(references, hypotheses)
+    cider, _ = Cider().compute_score(references, hypotheses)
     
     data_dict["bleu"] = bleu4
-    # data_dict["rouge"]= rouge
-    # data_dict["meteor"] = meteor
-    # data_dict["cider"] = cider
+    data_dict["rouge"]= rouge
+    data_dict["meteor"] = meteor
+    data_dict["cider"] = cider
     
     return loss, data_dict
 
-
+def calc_scores(data_dict):

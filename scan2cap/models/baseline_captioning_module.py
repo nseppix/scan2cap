@@ -2,7 +2,6 @@ import torch
 from torch import nn
 import numpy as np
 import torchvision
-from nltk.translate.bleu_score import corpus_bleu
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

@@ -10,3 +10,6 @@
 [submodule "ScanRefer"]
 	path = ScanRefer
 	url = https://github.com/daveredrum/ScanRefer.git
+[submodule "coco-caption"]
+	path = coco-caption
+	url = https://github.com/tylin/coco-caption.git
