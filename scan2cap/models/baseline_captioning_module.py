@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import numpy as np
 import torchvision
+from nltk.translate.bleu_score import corpus_bleu
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -46,7 +47,6 @@ class Decoder(nn.Module):
         self.fc.bias.data.fill_(0)
         self.fc.weight.data.uniform_(-0.1, 0.1)
 
-
     def init_hidden_state(self, encoder_out):
         """
         Creates the initial hidden and cell states for the decoder's LSTM based on the encoded images.
@@ -59,7 +59,7 @@ class Decoder(nn.Module):
         c = self.init_c(mean_encoder_out)
         return h, c
 
-    def forward(self, data_dict, mode):
+    def forward(self, data_dict):
         """
         Forward propagation.
 
@@ -69,13 +69,14 @@ class Decoder(nn.Module):
         :return: scores for vocabulary, sorted encoded captions, decode lengths, weights, sort indices
         """
         encoder_out = data_dict["ref_obj_features"]
-        embedded_captions = data_dict["lang_feat"]
+        description_ind = data_dict["lang_indices"]        
+        embedded_captions = self.idx2embedding[description_ind]
         caption_lengths = data_dict["lang_len"]
         batch_size = encoder_out.size(0)
         encoder_dim = encoder_out.size(-1)
         vocab_size = self.vocab_size
         
-        if mode == "train":
+        if self.train():
             
             # Sort input data by decreasing lengths; why? apparent below
             # caption_lengths, sort_ind = caption_lengths.squeeze(1).sort(dim=0, descending=True)
@@ -92,7 +93,7 @@ class Decoder(nn.Module):
             # So, decoding lengths are actual lengths - 1
             decode_lengths = (caption_lengths - 1).tolist()
 
-            # Create tensors to hold word predicion scores and alphas
+            # Create tensors to hold word predicion scores
             predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size).to(device)
 
             # At each time-step, decode by
@@ -101,7 +102,7 @@ class Decoder(nn.Module):
                 batch_size_t = sum([l > t for l in decode_lengths])
                 
                 h, c = self.decode_step(
-                    torch.cat([embedded_captions[:batch_size_t, t, :], encoder_out[:batch_size_t], dim=1),
+                    torch.cat([embedded_captions[:batch_size_t, t, :], encoder_out[:batch_size_t]], dim=1),
                     (h[:batch_size_t], c[:batch_size_t]))  # (batch_size_t, decoder_dim)
                 preds = self.fc(self.dropout(h))  # (batch_size_t, vocab_size)
                 predictions[:batch_size_t, t, :] = preds
@@ -109,9 +110,32 @@ class Decoder(nn.Module):
             #now we need to resort the output into its initial order
             _, orig_idx = sort_ind.sort(0)
             predictions_resorted = predictions[orig_idx]
-            data_dict["caption_predictions"] = predictions
-            
+            data_dict["caption_predictions"] = predictions_resorted
+
         else:
-            # here I would do the evaluate forward
+            # init hidden, cell state & prediction
+            h, c = self.init_hidden_state(encoder_out)
+            scores = self.fc(h)
+            wrd_idx = torch.argmax(scores, dim=1)
+            embedded_word = self.idx2embedding[wrd_idx]
+
+            wrd_sequence = [wrd_idx] # add here the index of the start token
+            step = 1
+
+            while True:
+                h, c = self.decode_step(
+                    torch.cat([embedded_word, encoder_out], dim=1), (h,c)) 
+
+                prediction = self.fc(h)
+                wrd_idx = torch.argmax(prediction, dim=1)
+                embedded_word = self.idx2embedding[wrd_idx]
+                wrd_sequence = torch.cat([wrd_sequence, word_idx], dim=1)
+                if step > 50: # we can think about this value
+                    break
+                if wrd_idx == 0: # what was the index of the end token? 
+                    break
+                step += 1
+
+        data_dict["predicted_sequence_idx"] = wrd_sequence
 
         return data_dict

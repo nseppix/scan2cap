@@ -443,11 +443,26 @@ def pointnet_pretrain_loss(data_dict):
 
     return loss, data_dict
 
-def caption_loss(data_dict):
-    targets = data_dict["lang_feats"]
-    scores = data_dict["caption_predictions"]
-    loss = nn.CrossEntropyLoss(scores, targets)
-    data_dict["loss"] = loss 
+def caption_loss(data_dict, idx2emmbedding):
+
+    targets = data_dict["lang_indices"] 
+    references = np.array([targets, data_dict["other_lang_indices"]]) #remove -1 one here
+    scores = data_dict["caption_predictions"] 
+
+    scores, _ = pack_padded_sequence(scores, data_dict["lang_len"], batch_first=True)
+    targets, _ = pack_padded_sequence(targets, data_dict["lang_len"], batch_first=True)
+    
+    loss = F.cross_entropy(scores, targets)
+    data_dict["loss"] = loss
+
+    # add here the part to calculate the the scores 
+    bleu4 = corpus_bleu(references, hypotheses)
+    
+    data_dict["bleu"] = bleu4
+    # data_dict["rouge"]= rouge
+    # data_dict["meteor"] = meteor
+    # data_dict["cider"] = cider
+    
     return loss, data_dict
 
 
