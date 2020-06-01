@@ -6,8 +6,11 @@
 # Creation Date: Sun Feb  8 14:16:54 2015
 #
 # Authors: Ramakrishna Vedantam <vrama91@vt.edu> and Tsung-Yi Lin <tl483@cornell.edu>
+import sys
+import os
 
-from cider_scorer import CiderScorer
+sys.path.append(os.path.join(os.getcwd(), "utils"))
+from utils.cider.cider_scorer import CiderScorer
 import pdb
 
 class Cider:

@@ -1,6 +1,8 @@
 import json
 import os
 from tqdm import tqdm
+import sys
+sys.path.append(os.path.join(os.getcwd()))  # HACK add the root folder
 
 from collections import Counter
 

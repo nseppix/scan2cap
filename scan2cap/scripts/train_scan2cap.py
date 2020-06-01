@@ -9,11 +9,12 @@ import numpy as np
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
+sys.path.append(os.path.join(os.getcwd()))  # HACK add the root folder
 from lib.scan2cap_dataset import Scan2CapDataset
-from lib.solver_pretrain import SolverPretrain
+from lib.solver_captioning import SolverCaptioning
 from models.scan2cap_model import Scan2CapModel
 
-sys.path.append(os.path.join(os.getcwd()))  # HACK add the root folder
+
 from data.scannet.model_util_scannet import ScannetDatasetConfig
 from lib.config import CONF
 
@@ -59,6 +60,7 @@ def get_model(args):
 
 
 def get_num_params(model):
+    
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     num_params = int(sum([np.prod(p.size()) for p in model_parameters]))
 
@@ -68,7 +70,7 @@ def get_num_params(model):
 def get_solver(args, dataloader, stamp):
     model = get_model(args)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    solver = SolverPretrain(model, DC, dataloader, optimizer, stamp, args.val_step, early_stopping=args.es)
+    solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, args.val_step, early_stopping=args.es)
     num_params = get_num_params(model)
 
     return solver, num_params

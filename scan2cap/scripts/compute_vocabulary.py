@@ -1,9 +1,10 @@
 import json
+import pickle
 import os
 from tqdm import tqdm
-
+import sys 
 from collections import Set
-
+sys.path.append(os.path.join(os.getcwd()))  # HACK add the root folder
 from lib.config import CONF
 from lib.scan2cap_dataset import Scan2CapDataset
 
@@ -11,6 +12,7 @@ SCANREFER_TRAIN = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtere
 SCANREFER_VAL = json.load(open(os.path.join(CONF.PATH.DATA, "ScanRefer_filtered_val.json")))
 
 OUT_FILE = os.path.join(CONF.PATH.DATA, "vocabulary.json")
+GLOVE_PICKLE = os.path.join(CONF.PATH.DATA, "glove.p")
 
 
 def get_scanrefer(scanrefer_train, scanrefer_val, num_scenes):

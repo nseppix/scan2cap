@@ -6,11 +6,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pack_padded_sequence
 import numpy as np
 import sys
 import os
 
 sys.path.append(os.path.join(os.getcwd(), "lib")) # HACK add the lib folder
+sys.path.append(os.path.join(os.getcwd(), "utils")) # HACK add the utils folder
+
 from utils.nn_distance import nn_distance, huber_loss
 from lib.ap_helper import parse_predictions
 from lib.loss import SoftmaxRankingLoss
@@ -449,26 +452,27 @@ def pointnet_pretrain_loss(data_dict):
 
     return loss, data_dict
 
-def caption_loss(data_dict, idx2emmbedding):
+def caption_loss(data_dict):
 
-    targets = data_dict["lang_indices"] 
+    targets = data_dict["lang_indices"]
     
-    scores = data_dict["caption_predictions"] 
+    scores = data_dict["caption_predictions"]
+    #scores = torch.argmax(scores, dim=2)
 
-    scores, _ = pack_padded_sequence(scores, data_dict["lang_len"], batch_first=True)
-    targets, _ = pack_padded_sequence(targets, data_dict["lang_len"], batch_first=True)
+    # scores, _ = pack_padded_sequence(scores, data_dict["lang_len"], batch_first=True)
+    # targets, _ = pack_padded_sequence(targets, data_dict["lang_len"], batch_first=True)
     
-    loss = F.cross_entropy(scores, targets)
+    loss = F.cross_entropy(scores, targets, ignore_index=-1)
     data_dict["loss"] = loss
 
     references = {}
     hypotheses = {}
 
-    hypo = torch.argmax(scores, dim=2)
+    hypo = torch.argmax(scores, dim=1)
 
-    for i in range(data_dict.size(0)):
-        references["i"] = [targets[i].append(data_dict["other_lang_indices"][i])
-        hypotheses["i"] = hypo[i]
+    for i in range(targets.size(0)):
+        references["{}".format(i)] = [targets[i].tolist(),data_dict["other_lang_indices"][i].tolist()]
+        hypotheses["{}".format(i)] = [hypo[i].tolist()]
 
     
     # add here the part to calculate the the scores 
@@ -483,5 +487,3 @@ def caption_loss(data_dict, idx2emmbedding):
     data_dict["cider"] = cider
     
     return loss, data_dict
-
-def calc_scores(data_dict):

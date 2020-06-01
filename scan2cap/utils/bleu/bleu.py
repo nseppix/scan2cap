@@ -7,8 +7,12 @@
 # Creation Date : 06-01-2015
 # Last Modified : Thu 19 Mar 2015 09:13:28 PM PDT
 # Authors : Hao Fang <hfang@uw.edu> and Tsung-Yi Lin <tl483@cornell.edu>
+import sys
+import os
 
-from bleu_scorer import BleuScorer
+sys.path.append(os.path.join(os.getcwd(), "utils"))
+
+from utils.bleu.bleu_scorer import BleuScorer
 
 
 class Bleu:

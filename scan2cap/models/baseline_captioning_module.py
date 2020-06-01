@@ -28,7 +28,14 @@ class Decoder(nn.Module):
 
         self.vocab_size = len(vocab_list)
         embedding_dict["<end>"] = np.zeros(self.embed_dim)
-        self.idx2embedding = nn.Parameter(torch.stack([torch.tensor(embedding_dict[word]) for word in vocab_list]))
+        idx2embedding = []
+        for word in vocab_list:
+            if word in embedding_dict:
+                embedding = embedding_dict[word]
+            else:
+                embedding = embedding_dict["unk"]
+            idx2embedding.append(embedding)
+        self.idx2embedding = nn.Parameter(torch.tensor(idx2embedding))
 
         self.dropout = nn.Dropout(p=self.dropout)
         self.decode_step = nn.LSTMCell(self.embed_dim + self.encoder_dim, self.decoder_dim, bias=True)  # decoding LSTMCell
@@ -50,12 +57,11 @@ class Decoder(nn.Module):
         """
         Creates the initial hidden and cell states for the decoder's LSTM based on the encoded images.
 
-        :param encoder_out: encoded images, a tensor of dimension (batch_size, num_pixels, encoder_dim)
+        :param encoder_out: encoded images, a tensor of dimension (batch_size, encoder_dim)
         :return: hidden state, cell state
         """
-        mean_encoder_out = encoder_out.mean(dim=1)
-        h = self.init_h(mean_encoder_out)  # (batch_size, decoder_dim)
-        c = self.init_c(mean_encoder_out)
+        h = self.init_h(encoder_out)  # (batch_size, decoder_dim)
+        c = self.init_c(encoder_out)
         return h, c
 
     def forward(self, data_dict):
@@ -67,9 +73,10 @@ class Decoder(nn.Module):
         :param caption_lengths: caption lengths, a tensor of dimension (batch_size, 1)
         :return: scores for vocabulary, sorted encoded captions, decode lengths, weights, sort indices
         """
-        encoder_out = data_dict["ref_obj_features"]
-        description_ind = data_dict["lang_indices"]        
-        embedded_captions = self.idx2embedding[description_ind]
+        ddtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+        encoder_out = data_dict["ref_obj_features"].type(ddtype)
+        description_ind = data_dict["lang_indices"]       
+        embedded_captions = self.idx2embedding[description_ind].type(ddtype)
         caption_lengths = data_dict["lang_len"]
         batch_size = encoder_out.size(0)
         encoder_dim = encoder_out.size(-1)
@@ -79,7 +86,7 @@ class Decoder(nn.Module):
             
             # Sort input data by decreasing lengths; why? apparent below
             # caption_lengths, sort_ind = caption_lengths.squeeze(1).sort(dim=0, descending=True)
-            caption_lengths, sort_ind = torch.IntTensor(lens).sort(0, descending=True)
+            caption_lengths, sort_ind = torch.sort(caption_lengths, dim=0, descending=True)
             encoder_out = encoder_out[sort_ind]
             encoded_captions = embedded_captions[sort_ind]
 
@@ -90,21 +97,20 @@ class Decoder(nn.Module):
             #emb_h = self.vocabulary[preds.max(1)]
             # We won't decode at the <end> position, since we've finished generating as soon as we generate <end>
             # So, decoding lengths are actual lengths - 1
-            decode_lengths = (caption_lengths - 1).tolist()
+            decode_lengths = (caption_lengths).tolist()
 
             # Create tensors to hold word predicion scores
-            predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size).to(device)
+            predictions = torch.zeros(batch_size, vocab_size, max(decode_lengths),).to(device)
 
             # At each time-step, decode by
             # then generate a new word in the decoder with the previous word
             for t in range(max(decode_lengths)):
                 batch_size_t = sum([l > t for l in decode_lengths])
-                
                 h, c = self.decode_step(
-                    torch.cat([embedded_captions[:batch_size_t, t, :], encoder_out[:batch_size_t]], dim=1),
-                    (h[:batch_size_t], c[:batch_size_t]))  # (batch_size_t, decoder_dim)
+                    torch.cat([embedded_captions[:batch_size_t, t, :], encoder_out[:batch_size_t,:]], dim=1),
+                    (h[:batch_size_t,:], c[:batch_size_t,:]))  # (batch_size_t, decoder_dim)
                 preds = self.fc(self.dropout(h))  # (batch_size_t, vocab_size)
-                predictions[:batch_size_t, t, :] = preds
+                predictions[:batch_size_t, :, t] = preds
 
             #now we need to resort the output into its initial order
             _, orig_idx = sort_ind.sort(0)
@@ -135,6 +141,6 @@ class Decoder(nn.Module):
                     break
                 step += 1
 
-        data_dict["predicted_sequence_idx"] = wrd_sequence
+            data_dict["predicted_sequence_idx"] = wrd_sequence
 
         return data_dict
