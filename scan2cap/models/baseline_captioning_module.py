@@ -83,7 +83,6 @@ class Decoder(nn.Module):
         encoder_dim = encoder_out.size(-1)
         vocab_size = self.vocab_size
 
-        self.eval()
         if self.training:
             
             # Sort input data by decreasing lengths; why? apparent below

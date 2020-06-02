@@ -6,6 +6,7 @@ import sys
 from datetime import datetime
 
 import numpy as np
+import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
@@ -72,6 +73,11 @@ def get_solver(args, dataloader, stamp):
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     vocabulary = VOCABULARY 
     solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, vocabulary, args.val_step , early_stopping=args.es)
+    if args.pnextractor_cp is not None:
+        pnextractor_cp = torch.load(args.pnextractor_cp)
+        model.load_extractor(pnextractor_cp)
+        for p in model.pn_extractor.parameters(True):
+            p.requires_grad_(False)
     num_params = get_num_params(model)
 
     return solver, num_params
@@ -165,6 +171,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_color', action='store_true', help='Use RGB color in input.')
     parser.add_argument('--use_normal', action='store_true', help='Use RGB color in input.')
     parser.add_argument('--use_multiview', action='store_true', help='Use multiview images.')
+    parser.add_argument('--pnextractor_cp', type=str, help="Checkpoint location for pointnet extractor.", default=None)
     args = parser.parse_args()
 
     # setting
