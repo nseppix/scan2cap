@@ -155,7 +155,7 @@ class Decoder(nn.Module):
 
             tmp = torch.tensor(predictions)
             tmp[tmp < 0] = 0
-            scores[tmp.unsqueeze(1)] = 1
+            scores.scatter_(1, tmp.unsqueeze(1), 1)
 
             data_dict["caption_predictions"] = scores
 
