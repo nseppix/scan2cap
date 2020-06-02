@@ -472,29 +472,15 @@ def caption_loss(data_dict, vocabulary):
 
     for i in range(targets.size(0)):
         #stringify
-        target_strings = []
-        for index in targets[i]:
-            if index != -1:
-                word = vocabulary[index]
-                target_strings.append(word) 
-        target_strings = [' '.join(target_strings)]
+        target_strings = " ".join([vocabulary[index] for index in targets[i] if index > 0])
 
         num_oth_ref = data_dict["other_lang_indices"].size(1)
-        oth_ref = []
-        for t in range(num_oth_ref):
-            singl_ref = []
-            for index in data_dict["other_lang_indices"][i,t,:]:
-                if index != -1:
-                    word = vocabulary[index]
-                    singl_ref.append(word)
-            oth_ref_string = ' '.join(singl_ref)
-            oth_ref.append(oth_ref_string)  
+        oth_ref = [
+            ' '.join([vocabulary[index] for index in data_dict["other_lang_indices"][i,t,:] if index > 0])
+            for t in range(num_oth_ref)]
         references["{}".format(i)] = target_strings + oth_ref
 
-        hypo_strings = []
-        for index in hypo[i]:
-            word = vocabulary[index]
-            hypo_strings.append(word)
+        hypo_strings = [vocabulary[index] for index in hypo[i] if index > 0]
         hypotheses["{}".format(i)] = [' '.join(hypo_strings)]
  
     # add here the part to calculate the the scores 

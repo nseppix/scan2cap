@@ -3,6 +3,8 @@ from torch import nn
 import numpy as np
 import torchvision
 
+from lib.config import CONF
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -35,7 +37,7 @@ class Decoder(nn.Module):
             else:
                 embedding = embedding_dict["unk"]
             idx2embedding.append(embedding)
-        self.idx2embedding = nn.Parameter(torch.tensor(idx2embedding))
+        self.idx2embedding = nn.Parameter(torch.tensor(idx2embedding, dtype=torch.float32))
 
         self.dropout = nn.Dropout(p=self.dropout)
         self.decode_step = nn.LSTMCell(self.embed_dim + self.encoder_dim, self.decoder_dim, bias=True)  # decoding LSTMCell
@@ -73,16 +75,16 @@ class Decoder(nn.Module):
         :param caption_lengths: caption lengths, a tensor of dimension (batch_size, 1)
         :return: scores for vocabulary, sorted encoded captions, decode lengths, weights, sort indices
         """
-        ddtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
-        encoder_out = data_dict["ref_obj_features"].type(ddtype)
+        encoder_out = data_dict["ref_obj_features"]
         description_ind = data_dict["lang_indices"]       
-        embedded_captions = self.idx2embedding[description_ind].type(ddtype)
+        embedded_captions = self.idx2embedding[description_ind]
         caption_lengths = data_dict["lang_len"]
         batch_size = encoder_out.size(0)
         encoder_dim = encoder_out.size(-1)
         vocab_size = self.vocab_size
-        
-        if self.train():
+
+        self.eval()
+        if self.training:
             
             # Sort input data by decreasing lengths; why? apparent below
             # caption_lengths, sort_ind = caption_lengths.squeeze(1).sort(dim=0, descending=True)
@@ -124,23 +126,37 @@ class Decoder(nn.Module):
             wrd_idx = torch.argmax(scores, dim=1)
             embedded_word = self.idx2embedding[wrd_idx]
 
-            wrd_sequence = [wrd_idx] # add here the index of the start token
+            predictions = scores.new_zeros((batch_size, CONF.TRAIN.MAX_DES_LEN), dtype=torch.int64) - 1
+            predictions[:, 0] = wrd_idx
             step = 1
+
+            incomplete_indices = [i for i in range(batch_size)]
 
             while True:
                 h, c = self.decode_step(
-                    torch.cat([embedded_word, encoder_out], dim=1), (h,c)) 
+                    torch.cat([embedded_word[incomplete_indices], encoder_out[incomplete_indices]], dim=1), (h,c))
 
                 prediction = self.fc(h)
                 wrd_idx = torch.argmax(prediction, dim=1)
                 embedded_word = self.idx2embedding[wrd_idx]
-                wrd_sequence = torch.cat([wrd_sequence, wrd_idx], dim=1)
-                if step > 50: # we can think about this value
-                    break
-                if wrd_idx == 0: # what was the index of the end token? 
-                    break
-                step += 1
 
-            data_dict["predicted_sequence_idx"] = wrd_sequence
+                predictions[incomplete_indices, step] = wrd_idx
+
+                completed_indices = torch.nonzero(wrd_idx == 0).tolist()
+                for c_i in completed_indices:
+                    incomplete_indices.remove(c_i)
+
+                step += 1
+                if step >= CONF.TRAIN.MAX_DES_LEN: # we can think about this value
+                    break
+
+            data_dict["caption_indices"] = predictions
+            scores = scores.new_zeros((batch_size, self.vocab_size, CONF.TRAIN.MAX_DES_LEN))
+
+            tmp = torch.tensor(predictions)
+            tmp[tmp < 0] = 0
+            scores[tmp.unsqueeze(1)] = 1
+
+            data_dict["caption_predictions"] = scores
 
         return data_dict
