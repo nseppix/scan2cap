@@ -13,3 +13,6 @@
 [submodule "coco-caption"]
 	path = coco-caption
 	url = https://github.com/tylin/coco-caption.git
+[submodule "CaptionMetrics"]
+	path = CaptionMetrics
+	url = https://github.com/wangleihitcs/CaptionMetrics.git

@@ -80,12 +80,12 @@ class Scan2CapDataset(Dataset):
         lang_indices[:lang_len] = np.array([self.vocab2index[t] for t in lang_tokens[:lang_len]])
 
         other_ann_ids = self.different_annotations[(scene_id, object_id)]
-        other_lang_lens = np.zeros((MAX_DIFF_ANNS))
+        other_lang_lens = np.zeros((MAX_DIFF_ANNS), dtype=np.int)
         other_lang_lens[:len(other_ann_ids)] = np.array([min(len(self.scanrefer[o_id]["token"]), CONF.TRAIN.MAX_DES_LEN) for o_id in other_ann_ids])
         other_lang_indices = np.zeros((MAX_DIFF_ANNS, CONF.TRAIN.MAX_DES_LEN)) - 1
         for i, o_id in enumerate(other_ann_ids):
             o_tokens = self.scanrefer[o_id]["token"]
-            o_len = len(o_tokens)
+            o_len = other_lang_lens[i]
             other_lang_indices[i, :o_len] = np.array([self.vocab2index[t] for t in o_tokens[:o_len]])
 
         # get pc
@@ -210,7 +210,7 @@ class Scan2CapDataset(Dataset):
 
         self.different_annotations = defaultdict(lambda: [])
         for i, data in enumerate(self.scanrefer):
-            self.different_annotations[(data["scene_id"], data["object_id"])] += [i]
+            self.different_annotations[(data["scene_id"], int(data["object_id"]))] += [i]
 
         # load scene data
         self.scene_data = {}

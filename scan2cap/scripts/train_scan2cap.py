@@ -70,7 +70,8 @@ def get_num_params(model):
 def get_solver(args, dataloader, stamp):
     model = get_model(args)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, args.val_step, early_stopping=args.es)
+    vocabulary = VOCABULARY 
+    solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, vocabulary, args.val_step , early_stopping=args.es)
     num_params = get_num_params(model)
 
     return solver, num_params

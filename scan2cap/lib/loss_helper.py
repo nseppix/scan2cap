@@ -13,16 +13,16 @@ import os
 
 sys.path.append(os.path.join(os.getcwd(), "lib")) # HACK add the lib folder
 sys.path.append(os.path.join(os.getcwd(), "utils")) # HACK add the utils folder
-
+sys.path.append(os.path.join(os.getcwd(), "utils/pycocoevalcap"))
 from utils.nn_distance import nn_distance, huber_loss
 from lib.ap_helper import parse_predictions
 from lib.loss import SoftmaxRankingLoss
 from utils.box_util import get_3d_box, get_3d_box_batch, box3d_iou, box3d_iou_batch
 
-from utils.bleu.bleu import Bleu
-from utils.meteor.meteor import Meteor
-from utils.rouge.rouge import Rouge
-from utils.cider.cider import Cider
+from pycocoevalcap.bleu.bleu import Bleu
+# from utils.pycocoevalcap.meteor.meteor import Meteor
+from pycocoevalcap.rouge.rouge import Rouge
+from pycocoevalcap.cider.cider import Cider
 
 
 FAR_THRESHOLD = 0.6
@@ -452,7 +452,7 @@ def pointnet_pretrain_loss(data_dict):
 
     return loss, data_dict
 
-def caption_loss(data_dict):
+def caption_loss(data_dict, vocabulary):
 
     targets = data_dict["lang_indices"]
     
@@ -471,19 +471,41 @@ def caption_loss(data_dict):
     hypo = torch.argmax(scores, dim=1)
 
     for i in range(targets.size(0)):
-        references["{}".format(i)] = [targets[i].tolist(),data_dict["other_lang_indices"][i].tolist()]
-        hypotheses["{}".format(i)] = [hypo[i].tolist()]
+        #stringify
+        target_strings = []
+        for index in targets[i]:
+            if index != -1:
+                word = vocabulary[index]
+                target_strings.append(word) 
+        target_strings = [' '.join(target_strings)]
 
-    
+        num_oth_ref = data_dict["other_lang_indices"].size(1)
+        oth_ref = []
+        for t in range(num_oth_ref):
+            singl_ref = []
+            for index in data_dict["other_lang_indices"][i,t,:]:
+                if index != -1:
+                    word = vocabulary[index]
+                    singl_ref.append(word)
+            oth_ref_string = ' '.join(singl_ref)
+            oth_ref.append(oth_ref_string)  
+        references["{}".format(i)] = target_strings + oth_ref
+
+        hypo_strings = []
+        for index in hypo[i]:
+            word = vocabulary[index]
+            hypo_strings.append(word)
+        hypotheses["{}".format(i)] = [' '.join(hypo_strings)]
+ 
     # add here the part to calculate the the scores 
-    bleu4, _ = Bleu(4).compute_score(references, hypotheses)
-    meteor, _ = Meteor().compute_score(references, hypotheses)
+    bleu4, _ = Bleu(n=4).compute_score(references, hypotheses)
+    # meteor, _ = Meteor().compute_score(references, hypotheses)
     rouge, _ = Rouge().compute_score(references, hypotheses)
     cider, _ = Cider().compute_score(references, hypotheses)
     
     data_dict["bleu"] = bleu4
     data_dict["rouge"]= rouge
-    data_dict["meteor"] = meteor
+    # data_dict["meteor"] = meteor
     data_dict["cider"] = cider
     
     return loss, data_dict
