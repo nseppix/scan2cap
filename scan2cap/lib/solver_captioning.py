@@ -21,7 +21,9 @@ from utils.eta import decode_eta
 ITER_REPORT_TEMPLATE = """
 -------------------------------iter: [{epoch_id}: {iter_id}/{total_iter}]-------------------------------
 [loss] train_loss: {train_loss}
-[sco.] train_bleu: {train_bleu}
+[sco.] train_bleu4: {train_bleu4}
+[sco.] train_rouge: {train_rouge}
+[sco.] train_cider: {train_cider}
 [info] mean_fetch_time: {mean_fetch_time}s
 [info] mean_forward_time: {mean_forward_time}s
 [info] mean_backward_time: {mean_backward_time}s
@@ -33,17 +35,22 @@ ITER_REPORT_TEMPLATE = """
 EPOCH_REPORT_TEMPLATE = """
 ---------------------------------summary---------------------------------
 [train] train_loss: {train_loss}
-[train] train_bleu: {train_bleu}
-[train] train_bleu: {train_bleu}
+[train] train_bleu4: {train_bleu4}
+[train] train_rouge: {train_rouge}
+[train] train_cider: {train_cider}
 [val]   val_loss: {val_loss}
-[val]   val_bleu: {val_bleu}
+[val]   val_bleu4: {val_bleu4}
+[val]   val_cider: {val_cider}
 """
 
 BEST_REPORT_TEMPLATE = """
 --------------------------------------best--------------------------------------
 [best] epoch: {epoch}
 [loss] loss: {loss}
-[sco.] bleu: {bleu}
+[sco.] bleu4: {bleu4}
+[sco.] rouge: {rouge}
+[sco.] cider: {cider}
+
 """
 
 class SolverCaptioning():
@@ -65,7 +72,9 @@ class SolverCaptioning():
         self.best = {
             "epoch": 0,
             "loss": float("inf"),
-            "bleu": -float("inf"),
+            "bleu4": -float("inf"),
+            "rouge": -float("inf"),
+            "cider": -float("inf")
         }
 
         # log
@@ -81,7 +90,10 @@ class SolverCaptioning():
                 # loss (float, not torch.cuda.FloatTensor)
                 "loss": [],
                 # scores (float, not torch.cuda.FloatTensor)
-                "bleu": [],
+                "bleu4": [],
+                "rouge": [],
+                "cider": []
+
             } for phase in ["train", "val"]
         }
         
@@ -185,7 +197,9 @@ class SolverCaptioning():
                 # loss
                 "loss": 0,
                 # acc
-                "bleu": 0,
+                "bleu4": 0,
+                "rouge": 0,
+                "cider": 0
             }
 
             # load
@@ -212,7 +226,9 @@ class SolverCaptioning():
             # record log
             self.log[phase]["loss"].append(self._running_log["loss"].item())
 
-            self.log[phase]["bleu"].append(self._running_log["bleu"])
+            self.log[phase]["bleu4"].append(self._running_log["bleu4"])
+            self.log[phase]["rouge"].append(self._running_log["rouge"])
+            self.log[phase]["cider"].append(self._running_log["cider"])
 
             # report
             if phase == "train":
@@ -243,7 +259,7 @@ class SolverCaptioning():
 
         # check best
         if phase == "val":
-            cur_criterion = "bleu"
+            cur_criterion = "bleu4"
             cur_best = np.mean(self.log[phase][cur_criterion])
             if cur_best > self.best[cur_criterion]:
                 self._log("best {} achieved: {}".format(cur_criterion, cur_best))
@@ -251,7 +267,9 @@ class SolverCaptioning():
                 self._log("current val_loss: {}".format(np.mean(self.log["val"]["loss"])))
                 self.best["epoch"] = epoch_id + 1
                 self.best["loss"] = np.mean(self.log[phase]["loss"])
-                self.best["bleu"] = np.mean(self.log[phase]["bleu"])
+                self.best["bleu4"] = np.mean(self.log[phase]["bleu4"])
+                self.best["rouge"] = np.mean(self.log[phase]["rouge"])
+                self.best["cider"] = np.mean(self.log[phase]["cider"])
 
                 # save model
                 self._log("saving best models...\n")
@@ -267,12 +285,16 @@ class SolverCaptioning():
 
     def _eval(self, data_dict):
         # dump
-        self._running_log["bleu"] = np.mean(data_dict["bleu"].cpu().numpy())
+        self._running_log["bleu4"] = data_dict["bleu4"]
+        self._running_log["rouge"] = data_dict["rouge"]
+        self._running_log["cider"] = data_dict["cider"]
 
     def _dump_log(self, phase):
         log = {
             "loss": ["loss"],
-            "score": ["bleu"]
+            "bleu4": ["bleu4"],
+            "rouge": ["rouge"],
+            "cider": ["cider"],
         }
         for key in log:
             for item in log[key]:
@@ -315,7 +337,9 @@ class SolverCaptioning():
             iter_id=self._global_iter_id + 1,
             total_iter=self._total_iter["train"],
             train_loss=round(np.mean([v for v in self.log["train"]["loss"]]), 5),
-            train_bleu=round(np.mean([v for v in self.log["train"]["bleu"]]), 5),
+            train_bleu4=round(np.mean([v for v in self.log["train"]["bleu4"]]), 5),
+            train_rouge=round(np.mean([v for v in self.log["train"]["rouge"]]), 5),
+            train_cider=round(np.mean([v for v in self.log["train"]["cider"]]), 5),
             mean_fetch_time=round(np.mean(fetch_time), 5),
             mean_forward_time=round(np.mean(forward_time), 5),
             mean_backward_time=round(np.mean(backward_time), 5),
@@ -331,9 +355,13 @@ class SolverCaptioning():
         self._log("epoch [{}/{}] done...".format(epoch_id+1, self.epoch))
         epoch_report = self.__epoch_report_template.format(
             train_loss=round(np.mean([v for v in self.log["train"]["loss"]]), 5),
-            train_bleu=round(np.mean([v for v in self.log["train"]["bleu"]]), 5),
+            train_bleu4=round(np.mean([v for v in self.log["train"]["bleu4"]]), 5),
+            train_rouge=round(np.mean([v for v in self.log["train"]["rouge"]]), 5),
+            train_cider=round(np.mean([v for v in self.log["train"]["cider"]]), 5),
             val_loss=round(np.mean([v for v in self.log["val"]["loss"]]), 5),
-            val_bleu=round(np.mean([v for v in self.log["val"]["bleu"]]), 5),
+            val_bleu4=round(np.mean([v for v in self.log["val"]["bleu4"]]), 5),
+            val_rouge=round(np.mean([v for v in self.log["val"]["rouge"]]), 5),
+            val_cider=round(np.mean([v for v in self.log["val"]["cider"]]), 5),
         )
         self._log(epoch_report)
     
@@ -342,7 +370,9 @@ class SolverCaptioning():
         best_report = self.__best_report_template.format(
             epoch=self.best["epoch"],
             loss=round(self.best["loss"], 5),
-            bleu=round(self.best["bleu"], 5),
+            bleu4=round(self.best["bleu4"], 5),
+            rouge=round(self.best["rouge"], 5),
+            cider=round(self.best["cider"], 5),
         )
         self._log(best_report)
         with open(os.path.join(CONF.PATH.OUTPUT, self.stamp, "best.txt"), "w") as f:

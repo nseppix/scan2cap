@@ -503,7 +503,7 @@ def caption_loss(data_dict, vocabulary):
     rouge, _ = Rouge().compute_score(references, hypotheses)
     cider, _ = Cider().compute_score(references, hypotheses)
     
-    data_dict["bleu"] = bleu4
+    data_dict["bleu4"] = bleu4[3]
     data_dict["rouge"]= rouge
     # data_dict["meteor"] = meteor
     data_dict["cider"] = cider

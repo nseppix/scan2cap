@@ -100,7 +100,7 @@ class Decoder(nn.Module):
             decode_lengths = (caption_lengths).tolist()
 
             # Create tensors to hold word predicion scores
-            predictions = torch.zeros(batch_size, vocab_size, max(decode_lengths),).to(device)
+            predictions = torch.zeros(batch_size, vocab_size, description_ind.size(1)).to(device)
 
             # At each time-step, decode by
             # then generate a new word in the decoder with the previous word
@@ -134,7 +134,7 @@ class Decoder(nn.Module):
                 prediction = self.fc(h)
                 wrd_idx = torch.argmax(prediction, dim=1)
                 embedded_word = self.idx2embedding[wrd_idx]
-                wrd_sequence = torch.cat([wrd_sequence, word_idx], dim=1)
+                wrd_sequence = torch.cat([wrd_sequence, wrd_idx], dim=1)
                 if step > 50: # we can think about this value
                     break
                 if wrd_idx == 0: # what was the index of the end token? 
