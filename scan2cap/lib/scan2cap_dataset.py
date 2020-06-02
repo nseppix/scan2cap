@@ -73,20 +73,22 @@ class Scan2CapDataset(Dataset):
         
         # get language features
         lang_tokens = self.scanrefer[idx]["token"]
-        lang_len = len(lang_tokens)
+        lang_len = len(lang_tokens) + 1
         lang_len = lang_len if lang_len <= CONF.TRAIN.MAX_DES_LEN else CONF.TRAIN.MAX_DES_LEN
 
         lang_indices = np.zeros((CONF.TRAIN.MAX_DES_LEN)) - 1
-        lang_indices[:lang_len] = np.array([self.vocab2index[t] for t in lang_tokens[:lang_len]])
+        lang_indices[:lang_len-1] = np.array([self.vocab2index[t] for t in lang_tokens[:lang_len-1]])
+        lang_indices[lang_len-1] = self.vocab2index["<end>"]
 
         other_ann_ids = self.different_annotations[(scene_id, object_id)]
         other_lang_lens = np.zeros((MAX_DIFF_ANNS), dtype=np.int)
-        other_lang_lens[:len(other_ann_ids)] = np.array([min(len(self.scanrefer[o_id]["token"]), CONF.TRAIN.MAX_DES_LEN) for o_id in other_ann_ids])
+        other_lang_lens[:len(other_ann_ids)] = np.array([min(len(self.scanrefer[o_id]["token"]) + 1, CONF.TRAIN.MAX_DES_LEN) for o_id in other_ann_ids])
         other_lang_indices = np.zeros((MAX_DIFF_ANNS, CONF.TRAIN.MAX_DES_LEN)) - 1
         for i, o_id in enumerate(other_ann_ids):
             o_tokens = self.scanrefer[o_id]["token"]
             o_len = other_lang_lens[i]
-            other_lang_indices[i, :o_len] = np.array([self.vocab2index[t] for t in o_tokens[:o_len]])
+            other_lang_indices[i, :o_len-1] = np.array([self.vocab2index[t] for t in o_tokens[:o_len-1]])
+            other_lang_indices[i, o_len-1] = self.vocab2index["<end>"]
 
         # get pc
         mesh_vertices = self.scene_data[scene_id]["mesh_vertices"]
