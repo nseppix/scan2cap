@@ -78,6 +78,14 @@ def get_solver(args, dataloader, stamp):
         model.load_extractor(pnextractor_cp)
         for p in model.pn_extractor.parameters(True):
             p.requires_grad_(False)
+    if args.decoder_cp is not None:
+        decoder_cp = torch.load(args.decoder_cp)
+        model.load_decoder(decoder_cp)
+        for p in model.decoder_cp.parameters(True):
+            p.requires_grad_(False)
+    if args.cp is not None:
+        cp = torch.load(args.cp)
+        model.load_state_dict(cp, strict=False)
     num_params = get_num_params(model)
 
     return solver, num_params
@@ -172,6 +180,9 @@ if __name__ == "__main__":
     parser.add_argument('--use_normal', action='store_true', help='Use RGB color in input.')
     parser.add_argument('--use_multiview', action='store_true', help='Use multiview images.')
     parser.add_argument('--pnextractor_cp', type=str, help="Checkpoint location for pointnet extractor.", default=None)
+    parser.add_argument('--decoder_cp', type=str, help="Checkpoint location for LSTM decoder.", default=None)
+    parser.add_argument('--cp', type=str, help="Checkpoint location for Scan2Cap model.", default=None)
+
     args = parser.parse_args()
 
     # setting

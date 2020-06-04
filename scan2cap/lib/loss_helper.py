@@ -440,8 +440,7 @@ def get_loss(data_dict, config, reference=False, use_lang_classifier=False, use_
 def pointnet_pretrain_loss(data_dict):
     target = data_dict["ref_nyu40_label"]
     scores = data_dict["ref_obj_cls_scores"]
-    probs = F.softmax(scores, dim=1)
-    loss = F.cross_entropy(probs, target-1, weight=data_dict["class_weights"])
+    loss = F.cross_entropy(scores, target-1, weight=data_dict["class_weights"][0])
     data_dict["loss"] = loss
 
     _, preds = torch.max(scores, dim=1)
@@ -482,8 +481,11 @@ def caption_loss(data_dict, vocabulary):
 
         hypo_strings = [vocabulary[index] for index in hypo[i] if index > 0]
         hypotheses["{}".format(i)] = [' '.join(hypo_strings)]
- 
-    # add here the part to calculate the the scores 
+
+    print("Ref:", references["0"][0])
+    print("Hyp:", hypotheses["0"][0])
+
+    # add here the part to calculate the the scores
     bleu4, _ = Bleu(n=4).compute_score(references, hypotheses)
     # meteor, _ = Meteor().compute_score(references, hypotheses)
     rouge, _ = Rouge().compute_score(references, hypotheses)
