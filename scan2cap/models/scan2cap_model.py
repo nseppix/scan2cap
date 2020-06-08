@@ -9,7 +9,7 @@ class Scan2CapModel(nn.Module):
         super().__init__()
         self.feature_channels = feature_channels
 
-        self.pn_extractor = PointNetExtractor(feature_channels=feature_channels)
+        self.pn_extractor = PointNetExtractor(feature_channels=feature_channels, pretrain_mode=True)
         self.decoder = Decoder(vocab_list=vocab_list, embedding_dict=embedding_dict)
 
     def forward(self, data_dict):

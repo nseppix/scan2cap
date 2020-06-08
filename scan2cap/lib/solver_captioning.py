@@ -22,6 +22,7 @@ ITER_REPORT_TEMPLATE = """
 -------------------------------iter: [{epoch_id}: {iter_id}/{total_iter}]-------------------------------
 [loss] train_loss: {train_loss}
 [sco.] train_bleu4: {train_bleu4}
+[sco.] train_meteor: {train_meteor}
 [sco.] train_rouge: {train_rouge}
 [sco.] train_cider: {train_cider}
 [info] mean_fetch_time: {mean_fetch_time}s
@@ -36,6 +37,7 @@ EPOCH_REPORT_TEMPLATE = """
 ---------------------------------summary---------------------------------
 [train] train_loss: {train_loss}
 [train] train_bleu4: {train_bleu4}
+[train] train_meteor: {train_meteor}
 [train] train_rouge: {train_rouge}
 [train] train_cider: {train_cider}
 [val]   val_loss: {val_loss}
@@ -48,13 +50,14 @@ BEST_REPORT_TEMPLATE = """
 [best] epoch: {epoch}
 [loss] loss: {loss}
 [sco.] bleu4: {bleu4}
+[sco.] meteor: {meteor}
 [sco.] rouge: {rouge}
 [sco.] cider: {cider}
 
 """
 
 class SolverCaptioning():
-    def __init__(self, model, config, dataloader, optimizer, stamp, vocabulary, val_step=10, early_stopping=-1):
+    def __init__(self, model, config, dataloader, optimizer, stamp, vocabulary, val_step=10, early_stopping=-1, only_val=False):
         self.epoch = 0                    # set in __call__
         self.verbose = 0                  # set in __call__
         
@@ -68,11 +71,13 @@ class SolverCaptioning():
         self.no_improve = 0
         self.stop = False
         self.vocabulary = vocabulary
+        self.only_val = only_val
 
         self.best = {
             "epoch": 0,
             "loss": float("inf"),
             "bleu4": -float("inf"),
+            "meteor": -float("inf"),
             "rouge": -float("inf"),
             "cider": -float("inf")
         }
@@ -91,19 +96,21 @@ class SolverCaptioning():
                 "loss": [],
                 # scores (float, not torch.cuda.FloatTensor)
                 "bleu4": [],
+                "meteor": [],
                 "rouge": [],
                 "cider": []
 
             } for phase in ["train", "val"]
         }
-        
-        # tensorboard
-        os.makedirs(os.path.join(CONF.PATH.OUTPUT, stamp, "tensorboard/train"), exist_ok=True)
-        os.makedirs(os.path.join(CONF.PATH.OUTPUT, stamp, "tensorboard/val"), exist_ok=True)
-        self._log_writer = {
-            "train": SummaryWriter(os.path.join(CONF.PATH.OUTPUT, stamp, "tensorboard/train")),
-            "val": SummaryWriter(os.path.join(CONF.PATH.OUTPUT, stamp, "tensorboard/val"))
-        }
+
+        if not self.only_val:
+            # tensorboard
+            os.makedirs(os.path.join(CONF.PATH.OUTPUT, stamp, "tensorboard/train"), exist_ok=True)
+            os.makedirs(os.path.join(CONF.PATH.OUTPUT, stamp, "tensorboard/val"), exist_ok=True)
+            self._log_writer = {
+                "train": SummaryWriter(os.path.join(CONF.PATH.OUTPUT, stamp, "tensorboard/train")),
+                "val": SummaryWriter(os.path.join(CONF.PATH.OUTPUT, stamp, "tensorboard/val"))
+            }
 
         # training log
         log_path = os.path.join(CONF.PATH.OUTPUT, stamp, "log.txt")
@@ -126,6 +133,13 @@ class SolverCaptioning():
         self.verbose = verbose
         self._total_iter["train"] = len(self.dataloader["train"]) * epoch
         self._total_iter["val"] = len(self.dataloader["val"]) * self.val_step
+
+        if self.only_val:
+            self._log("evaluating...")
+            self._feed(self.dataloader["val"], "val", 0)
+            self._log("finished")
+            self._best_report()
+            return
         
         for epoch_id in range(epoch):
             try:
@@ -227,6 +241,7 @@ class SolverCaptioning():
             self.log[phase]["loss"].append(self._running_log["loss"].item())
 
             self.log[phase]["bleu4"].append(self._running_log["bleu4"])
+            self.log[phase]["meteor"].append(self._running_log["meteor"])
             self.log[phase]["rouge"].append(self._running_log["rouge"])
             self.log[phase]["cider"].append(self._running_log["cider"])
 
@@ -268,8 +283,12 @@ class SolverCaptioning():
                 self.best["epoch"] = epoch_id + 1
                 self.best["loss"] = np.mean(self.log[phase]["loss"])
                 self.best["bleu4"] = np.mean(self.log[phase]["bleu4"])
+                self.best["meteor"] = np.mean(self.log[phase]["meteor"])
                 self.best["rouge"] = np.mean(self.log[phase]["rouge"])
                 self.best["cider"] = np.mean(self.log[phase]["cider"])
+
+                if self.only_val:
+                    return
 
                 # save model
                 self._log("saving best models...\n")
@@ -286,6 +305,7 @@ class SolverCaptioning():
     def _eval(self, data_dict):
         # dump
         self._running_log["bleu4"] = data_dict["bleu4"]
+        self._running_log["meteor"] = data_dict["meteor"]
         self._running_log["rouge"] = data_dict["rouge"]
         self._running_log["cider"] = data_dict["cider"]
 
@@ -293,6 +313,7 @@ class SolverCaptioning():
         log = {
             "loss": ["loss"],
             "bleu4": ["bleu4"],
+            "meteor": ["meteor"],
             "rouge": ["rouge"],
             "cider": ["cider"],
         }
@@ -339,6 +360,7 @@ class SolverCaptioning():
             total_iter=self._total_iter["train"],
             train_loss=round(np.mean([v for v in self.log["train"]["loss"]]), 5),
             train_bleu4=round(np.mean([v for v in self.log["train"]["bleu4"]]), 5),
+            train_meteor=round(np.mean([v for v in self.log["train"]["meteor"]]), 5),
             train_rouge=round(np.mean([v for v in self.log["train"]["rouge"]]), 5),
             train_cider=round(np.mean([v for v in self.log["train"]["cider"]]), 5),
             mean_fetch_time=round(np.mean(fetch_time), 5),
@@ -357,10 +379,12 @@ class SolverCaptioning():
         epoch_report = self.__epoch_report_template.format(
             train_loss=round(np.mean([v for v in self.log["train"]["loss"]]), 5),
             train_bleu4=round(np.mean([v for v in self.log["train"]["bleu4"]]), 5),
+            train_meteor=round(np.mean([v for v in self.log["train"]["meteor"]]), 5),
             train_rouge=round(np.mean([v for v in self.log["train"]["rouge"]]), 5),
             train_cider=round(np.mean([v for v in self.log["train"]["cider"]]), 5),
             val_loss=round(np.mean([v for v in self.log["val"]["loss"]]), 5),
             val_bleu4=round(np.mean([v for v in self.log["val"]["bleu4"]]), 5),
+            val_meteor=round(np.mean([v for v in self.log["val"]["meteor"]]), 5),
             val_rouge=round(np.mean([v for v in self.log["val"]["rouge"]]), 5),
             val_cider=round(np.mean([v for v in self.log["val"]["cider"]]), 5),
         )
@@ -372,6 +396,7 @@ class SolverCaptioning():
             epoch=self.best["epoch"],
             loss=round(self.best["loss"], 5),
             bleu4=round(self.best["bleu4"], 5),
+            meteor=round(self.best["meteor"], 5),
             rouge=round(self.best["rouge"], 5),
             cider=round(self.best["cider"], 5),
         )

@@ -11,6 +11,7 @@ import numpy as np
 import sys
 import os
 
+
 sys.path.append(os.path.join(os.getcwd(), "lib")) # HACK add the lib folder
 sys.path.append(os.path.join(os.getcwd(), "utils")) # HACK add the utils folder
 sys.path.append(os.path.join(os.getcwd(), "utils/pycocoevalcap"))
@@ -19,10 +20,10 @@ from lib.ap_helper import parse_predictions
 from lib.loss import SoftmaxRankingLoss
 from utils.box_util import get_3d_box, get_3d_box_batch, box3d_iou, box3d_iou_batch
 
-from pycocoevalcap.bleu.bleu import Bleu
-# from utils.pycocoevalcap.meteor.meteor import Meteor
-from pycocoevalcap.rouge.rouge import Rouge
-from pycocoevalcap.cider.cider import Cider
+from utils.pycocoevalcap.bleu.bleu import Bleu
+from utils.pycocoevalcap.meteor.meteor import Meteor
+from utils.pycocoevalcap.rouge.rouge import Rouge
+from utils.pycocoevalcap.cider.cider import Cider
 
 
 FAR_THRESHOLD = 0.6
@@ -490,10 +491,14 @@ def caption_loss(data_dict, vocabulary):
     # meteor, _ = Meteor().compute_score(references, hypotheses)
     rouge, _ = Rouge().compute_score(references, hypotheses)
     cider, _ = Cider().compute_score(references, hypotheses)
+
+    meteor = 0
+
+    print(bleu4, meteor, rouge, cider)
     
     data_dict["bleu4"] = bleu4[3]
     data_dict["rouge"]= rouge
-    # data_dict["meteor"] = meteor
+    data_dict["meteor"] = meteor
     data_dict["cider"] = cider
     
     return loss, data_dict

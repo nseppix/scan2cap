@@ -2,7 +2,6 @@
   channels:
     - pytorch
     - conda-forge
-    - anaconda
   dependencies:
     - python=3.6
     - numpy

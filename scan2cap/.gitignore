@@ -10,6 +10,7 @@ lib/__pycache__
 lib/pointnet2/__pycache__
 models/__pycache__
 utils/__pycache__
+**/__pycache__
 
 # pointnet2
 lib/pointnet2/build/

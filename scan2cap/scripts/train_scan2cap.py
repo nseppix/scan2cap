@@ -72,7 +72,7 @@ def get_solver(args, dataloader, stamp):
     model = get_model(args)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     vocabulary = VOCABULARY 
-    solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, vocabulary, args.val_step , early_stopping=args.es)
+    solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, vocabulary, args.val_step , early_stopping=args.es, only_val=args.only_val)
     if args.pnextractor_cp is not None:
         pnextractor_cp = torch.load(args.pnextractor_cp)
         model.load_extractor(pnextractor_cp)
@@ -182,6 +182,7 @@ if __name__ == "__main__":
     parser.add_argument('--pnextractor_cp', type=str, help="Checkpoint location for pointnet extractor.", default=None)
     parser.add_argument('--decoder_cp', type=str, help="Checkpoint location for LSTM decoder.", default=None)
     parser.add_argument('--cp', type=str, help="Checkpoint location for Scan2Cap model.", default=None)
+    parser.add_argument('--only_val', action='store_true', help="Only perform evaluation.")
 
     args = parser.parse_args()
 

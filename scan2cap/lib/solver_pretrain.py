@@ -292,6 +292,7 @@ class SolverPretrain():
         # export
         for phase in ["train", "val"]:
             self._log_writer[phase].export_scalars_to_json(os.path.join(CONF.PATH.OUTPUT, self.stamp, "tensorboard/{}".format(phase), "all_scalars.json"))
+            self._log_writer[phase].close()
 
     def _train_report(self, epoch_id):
         # compute ETA
