@@ -10,6 +10,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 import numpy as np
 import sys
 import os
+import time
 
 
 sys.path.append(os.path.join(os.getcwd(), "lib")) # HACK add the lib folder
@@ -21,7 +22,7 @@ from lib.loss import SoftmaxRankingLoss
 from utils.box_util import get_3d_box, get_3d_box_batch, box3d_iou, box3d_iou_batch
 
 from utils.pycocoevalcap.bleu.bleu import Bleu
-from utils.pycocoevalcap.meteor.meteor import Meteor
+from utils.meteor import *
 from utils.pycocoevalcap.rouge.rouge import Rouge
 from utils.pycocoevalcap.cider.cider import Cider
 
@@ -483,19 +484,20 @@ def caption_loss(data_dict, vocabulary):
         hypo_strings = [vocabulary[index] for index in hypo[i] if index > 0]
         hypotheses["{}".format(i)] = [' '.join(hypo_strings)]
 
-    print("Ref:", references["0"][0])
-    print("Hyp:", hypotheses["0"][0])
+    #print("Ref:", references["0"][0])
+    #print("Hyp:", hypotheses["0"][0])
 
     # add here the part to calculate the the scores
     bleu4, _ = Bleu(n=4).compute_score(references, hypotheses)
-    # meteor, _ = Meteor().compute_score(references, hypotheses)
+    
+    meteor = compute_meteor(references, hypotheses)
     rouge, _ = Rouge().compute_score(references, hypotheses)
     cider, _ = Cider().compute_score(references, hypotheses)
 
-    meteor = 0
 
-    print(bleu4, meteor, rouge, cider)
-    
+    #print(bleu4, meteor, rouge, cider)
+
+    #meteor = 0
     data_dict["bleu4"] = bleu4[3]
     data_dict["rouge"]= rouge
     data_dict["meteor"] = meteor

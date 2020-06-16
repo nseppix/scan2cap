@@ -162,7 +162,8 @@ class Decoder(nn.Module):
             data_dict["caption_indices"] = predictions
             scores = obj_features.new_zeros((batch_size, self.vocab_size, CONF.TRAIN.MAX_DES_LEN))
 
-            tmp = torch.tensor(predictions)
+            # tmp = torch.tensor(predictions)
+            tmp = predictions.clone().detach()
             tmp[tmp < 0] = 0
             scores.scatter_(1, tmp.unsqueeze(1), 1)
 
