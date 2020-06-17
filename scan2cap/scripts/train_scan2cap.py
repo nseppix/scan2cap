@@ -55,7 +55,7 @@ def get_model(args):
     # initiate model
     input_channels = int(args.use_multiview) * 128 + int(args.use_normal) * 3 + int(args.use_color) * 3 + int(
         not args.no_height)
-    model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels).cuda()
+    model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels, use_votenet=args.use_votenet).cuda()
     del glove
     return model
 
@@ -75,8 +75,13 @@ def get_solver(args, dataloader, stamp):
     solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, vocabulary, args.val_step , early_stopping=args.es, only_val=args.only_val)
     if args.pnextractor_cp is not None:
         pnextractor_cp = torch.load(args.pnextractor_cp)
-        model.load_extractor(pnextractor_cp)
+        model.load_pn_extractor(pnextractor_cp)
         for p in model.pn_extractor.parameters(True):
+            p.requires_grad_(False)
+    if args.use_votenet and args.votenet_cp is not None:
+        votenet_cp = torch.load(args.votenet_cp)
+        model.load_votenet(votenet_cp)
+        for p in model.votenet_extractor.parameters(True):
             p.requires_grad_(False)
     if args.decoder_cp is not None:
         decoder_cp = torch.load(args.decoder_cp)
@@ -180,9 +185,11 @@ if __name__ == "__main__":
     parser.add_argument('--use_normal', action='store_true', help='Use RGB color in input.')
     parser.add_argument('--use_multiview', action='store_true', help='Use multiview images.')
     parser.add_argument('--pnextractor_cp', type=str, help="Checkpoint location for pointnet extractor.", default=None)
+    parser.add_argument('--votenet_cp', type=str, help="Checkpoint location for votenet extractor.", default=None)
     parser.add_argument('--decoder_cp', type=str, help="Checkpoint location for LSTM decoder.", default=None)
     parser.add_argument('--cp', type=str, help="Checkpoint location for Scan2Cap model.", default=None)
     parser.add_argument('--only_val', action='store_true', help="Only perform evaluation.")
+    parser.add_argument('--use_votenet', action='store_true', help="Use votenet as additional feature extractor. (Required for attention)")
 
     args = parser.parse_args()
 
