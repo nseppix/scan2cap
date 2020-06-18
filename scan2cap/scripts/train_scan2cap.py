@@ -79,7 +79,7 @@ def get_solver(args, dataloader, stamp):
         for p in model.pn_extractor.parameters(True):
             p.requires_grad_(False)
     if args.use_votenet and args.votenet_cp is not None:
-        votenet_cp = torch.load(args.votenet_cp)
+        votenet_cp = torch.load(args.votenet_cp)["model_state_dict"]
         model.load_votenet(votenet_cp)
         for p in model.votenet_extractor.parameters(True):
             p.requires_grad_(False)

@@ -13,7 +13,8 @@ class Scan2CapModel(nn.Module):
 
         self.pn_extractor = PointNetExtractor(feature_channels=feature_channels, pretrain_mode=True)
         if self.use_votenet:
-            self.votenet_extractor = VoteNetWrapperModule(feature_channels)
+            # Only use xyz + height for now, because pretrained model does not use color or normal info
+            self.votenet_extractor = VoteNetWrapperModule(input_feature_dim=0)
         self.decoder = Decoder(vocab_list=vocab_list, embedding_dict=embedding_dict)
 
     def forward(self, data_dict):
@@ -27,7 +28,7 @@ class Scan2CapModel(nn.Module):
         self.pn_extractor.load_state_dict(state_dict)
 
     def load_votenet(self, state_dict):
-        self.votenet_extractor.load_state_dict(state_dict, strict=False)
+        self.votenet_extractor.load_state_dict(state_dict)
 
     def load_decoder(self, state_dict):
         self.decoder.load_state_dict(state_dict)
