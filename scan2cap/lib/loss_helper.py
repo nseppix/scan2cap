@@ -504,3 +504,8 @@ def caption_loss(data_dict, vocabulary):
     data_dict["cider"] = cider
     
     return loss, data_dict
+
+
+def attention_regularization(data_dict, alpha_c=1.):
+    data_dict["loss"] += alpha_c * ((1. - data_dict["alphas"].sum(dim=1)) ** 2).mean()
+    return data_dict

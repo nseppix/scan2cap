@@ -91,7 +91,7 @@ class Pointnet2Backbone(nn.Module):
                 XXX-inds: int64 Tensor of shape (B,K) values in [0,N-1]
         """
         
-        pointcloud = data_dict["point_clouds"][:, :, :3+self.input_feature_dim]
+        pointcloud = data_dict["point_clouds"][:, :, :4+self.input_feature_dim]
 
         batch_size = pointcloud.shape[0]
 

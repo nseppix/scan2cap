@@ -14,7 +14,7 @@ from tensorboardX import SummaryWriter
 
 sys.path.append(os.path.join(os.getcwd(), "lib")) # HACK add the lib folder
 from lib.config import CONF
-from lib.loss_helper import get_loss, caption_loss
+from lib.loss_helper import get_loss, caption_loss, attention_regularization
 from utils.eta import decode_eta
 
 
@@ -57,7 +57,7 @@ BEST_REPORT_TEMPLATE = """
 """
 
 class SolverCaptioning():
-    def __init__(self, model, config, dataloader, optimizer, stamp, vocabulary, val_step=10, early_stopping=-1, only_val=False):
+    def __init__(self, model, config, dataloader, optimizer, stamp, vocabulary, attention, val_step=10, early_stopping=-1, only_val=False):
         self.epoch = 0                    # set in __call__
         self.verbose = 0                  # set in __call__
         
@@ -71,6 +71,7 @@ class SolverCaptioning():
         self.no_improve = 0
         self.stop = False
         self.vocabulary = vocabulary
+        self.attention = attention
         self.only_val = only_val
 
         self.best = {
@@ -190,6 +191,7 @@ class SolverCaptioning():
 
     def _compute_loss(self, data_dict):
         _, data_dict = caption_loss(data_dict, self.vocabulary)
+        if self.attention: data_dict = attention_regularization(data_dict)  
 
         # dump
         self._running_log["loss"] = data_dict["loss"]

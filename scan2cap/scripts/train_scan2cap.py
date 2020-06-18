@@ -55,7 +55,8 @@ def get_model(args):
     # initiate model
     input_channels = int(args.use_multiview) * 128 + int(args.use_normal) * 3 + int(args.use_color) * 3 + int(
         not args.no_height)
-    model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels, use_votenet=args.use_votenet).cuda()
+    model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels, 
+        use_votenet=args.use_votenet, use_attention=args.use_attention).cuda()
     del glove
     return model
 
@@ -72,7 +73,7 @@ def get_solver(args, dataloader, stamp):
     model = get_model(args)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     vocabulary = VOCABULARY 
-    solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, vocabulary, args.val_step , early_stopping=args.es, only_val=args.only_val)
+    solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, vocabulary, args.use_attention, args.val_step , early_stopping=args.es, only_val=args.only_val)
     if args.pnextractor_cp is not None:
         pnextractor_cp = torch.load(args.pnextractor_cp)
         model.load_pn_extractor(pnextractor_cp)
@@ -190,6 +191,7 @@ if __name__ == "__main__":
     parser.add_argument('--cp', type=str, help="Checkpoint location for Scan2Cap model.", default=None)
     parser.add_argument('--only_val', action='store_true', help="Only perform evaluation.")
     parser.add_argument('--use_votenet', action='store_true', help="Use votenet as additional feature extractor. (Required for attention)")
+    parser.add_argument('--use_attention', action='store_true', help="Use attention for captioning, only works if votenet is used")
 
     args = parser.parse_args()
 
