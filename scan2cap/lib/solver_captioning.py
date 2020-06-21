@@ -200,6 +200,10 @@ class SolverCaptioning():
         # switch mode
         self._set_phase(phase)
 
+        # Reset log
+        for key in self.log[phase]:
+            self.log[phase][key] = []
+
         # change dataloader
         dataloader = dataloader if phase == "train" else tqdm(dataloader)
 
@@ -277,8 +281,9 @@ class SolverCaptioning():
         # check best
         if phase == "val":
             cur_criterion = "bleu4"
+            print("Number of sample points", str(len(self.log[phase][cur_criterion])))
             cur_best = np.mean(self.log[phase][cur_criterion])
-            if cur_best > self.best[cur_criterion]:
+            if cur_best > self.best[cur_criterion] or self.only_val:
                 self._log("best {} achieved: {}".format(cur_criterion, cur_best))
                 self._log("current train_loss: {}".format(np.mean(self.log["train"]["loss"])))
                 self._log("current val_loss: {}".format(np.mean(self.log["val"]["loss"])))

@@ -170,6 +170,10 @@ class SolverPretrain():
         # switch mode
         self._set_phase(phase)
 
+        # Reset log
+        for key in self.log[phase]:
+            self.log[phase][key] = []
+
         # change dataloader
         dataloader = dataloader if phase == "train" else tqdm(dataloader)
 
