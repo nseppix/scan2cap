@@ -14,7 +14,7 @@ class Attentive_Decoder(nn.Module):
     """
 
     def __init__(self, vocab_list, embedding_dict, attention_dim=512, embed_dim=300, vote_dimension=128,
-                 object_proposals =128, encoder_dim=256+128, decoder_dim=512, dropout=0.5):
+                 object_proposals =128, encoder_dim=256+128, decoder_dim=512, dropout=0.5, objectness_thresh=0.5):
         """
         :param embed_dim: embedding size
         :param decoder_dim: size of decoder's RNN
@@ -28,7 +28,8 @@ class Attentive_Decoder(nn.Module):
         self.embed_dim = embed_dim
         self.decoder_dim = decoder_dim
         self.vote_dimension = vote_dimension
-        self. object_proposals = object_proposals
+        self.object_proposals = object_proposals
+        self.objectness_thresh =objectness_thresh
         self.dropout = dropout
 
         # attention part 
@@ -86,9 +87,14 @@ class Attentive_Decoder(nn.Module):
         aggregated_obj_features = data_dict["aggregated_vote_features"]
         obj_features = data_dict["ref_obj_features"]
         target_caption = data_dict["lang_indices"]
+        batch_size = obj_features.size(0)
+        objectness = torch.softmax(data_dict["objectness_scores"], dim=-1)[:, :, -1]
+        object_mask = objectness > self.objectness_thresh
+        
+        
         target_caption_embeddings = self.idx2embedding[target_caption]
         target_caption_lengths = data_dict["lang_len"]
-        batch_size = aggregated_obj_features.size(0)
+        
 
         if self.training:
             
@@ -120,7 +126,7 @@ class Attentive_Decoder(nn.Module):
             for t in range(max(decode_lengths)):
                 batch_size_t = sum([l > t for l in decode_lengths])
                 attention_weighted_encoding, alpha = self.attention(aggregated_obj_features[:batch_size_t],
-                                                                h[:batch_size_t])
+                                                                h[:batch_size_t], object_mask)
                 gate = self.sigmoid(self.f_beta(h[:batch_size_t]))
                 attention_weighted_encoding = gate * attention_weighted_encoding
 
@@ -161,7 +167,7 @@ class Attentive_Decoder(nn.Module):
             incomplete_indices = [i for i in range(batch_size)]
 
             while True:
-                attention_weighted_encoding, alpha = self.attention(aggregated_obj_features[incomplete_indices], h)
+                attention_weighted_encoding, alpha = self.attention(aggregated_obj_features[incomplete_indices], h, object_mask)
                 gate = self.sigmoid(self.f_beta(h))
                 attention_weighted_encoding = gate * attention_weighted_encoding
                 conc_encodings = torch.cat([attention_weighted_encoding, obj_features[incomplete_indices]], dim=1)
@@ -218,9 +224,9 @@ class Attention(nn.Module):
         self.decoder_att = nn.Linear(decoder_dim, attention_dim)  # linear layer to transform decoder's output
         self.full_att = nn.Linear(attention_dim, 1)  # linear layer to calculate values to be softmax-ed
         self.relu = nn.ReLU()
-        self.softmax = nn.Softmax(dim=1)  # softmax layer to calculate weights
+        self.softmax = nn.Softmax(dim=0)  # softmax layer to calculate weights
 
-    def forward(self, encoder_out, decoder_hidden):
+    def forward(self, encoder_out, decoder_hidden, object_mask):
         """
         Forward propagation.
 
@@ -231,7 +237,10 @@ class Attention(nn.Module):
         att1 = self.encoder_att(encoder_out)  # (batch_size, num_pixels, attention_dim)
         att2 = self.decoder_att(decoder_hidden)  # (batch_size, attention_dim)
         att = self.full_att(self.relu(att1 + att2.unsqueeze(1))).squeeze(2)  # (batch_size, num_pixels)
-        alpha = self.softmax(att)  # (batch_size, num_pixels)
+        alpha = torch.zeros_like(att)
+        
+        for i, (att_, object_mask_) in enumerate(zip(att,object_mask)):
+            alpha[i][object_mask_] = self.softmax(att_[object_mask_])    # (batch_size, num_pixels)
         attention_weighted_encoding = (encoder_out * alpha.unsqueeze(2)).sum(dim=1)  # (batch_size, encoder_dim)
 
         return attention_weighted_encoding, alpha
