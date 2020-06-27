@@ -411,7 +411,7 @@ def dump_results(args, scanrefer, data, config):
 
             # print(centers[0], sizes[0], bboxes[0], objectness[0])
 
-            objectness_masks = objectness > .5
+            objectness_masks = objectness > .75
             objectness = objectness[objectness_masks]
             bboxes = bboxes[objectness_masks, :]
 

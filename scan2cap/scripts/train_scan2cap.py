@@ -56,7 +56,7 @@ def get_model(args):
     input_channels = int(args.use_multiview) * 128 + int(args.use_normal) * 3 + int(args.use_color) * 3 + int(
         not args.no_height)
     model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels, 
-        use_votenet=args.use_votenet, use_attention=args.use_attention).cuda()
+        use_votenet=args.use_votenet, use_attention=args.use_attention, ).cuda()
     del glove
     return model
 
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     parser.add_argument('--only_val', action='store_true', help="Only perform evaluation.")
     parser.add_argument('--use_votenet', action='store_true', help="Use votenet as additional feature extractor. (Required for attention)")
     parser.add_argument('--use_attention', action='store_true', help="Use attention for captioning, only works if votenet is used")
-
+    parser.add_argument('--objectness_thresh', type=float, help="Threshold for accepting objects proposed by votenet", default=.75)
     args = parser.parse_args()
 
     # setting

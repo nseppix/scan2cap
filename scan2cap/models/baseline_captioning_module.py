@@ -13,7 +13,7 @@ class Decoder(nn.Module):
     Decoder.
     """
 
-    def __init__(self, vocab_list, embedding_dict, use_votenet, embed_dim=300, vote_dimension=128, encoder_dim=256, decoder_dim=512, dropout=0.5, objectness_thresh=0.5):
+    def __init__(self, vocab_list, embedding_dict, use_votenet, embed_dim=300, vote_dimension=128, encoder_dim=256, decoder_dim=512, dropout=0.5, objectness_thresh=0.75):
         """
         :param embed_dim: embedding size
         :param decoder_dim: size of decoder's RNN
@@ -88,6 +88,7 @@ class Decoder(nn.Module):
         if self.use_votenet:
             objectness = torch.softmax(data_dict["objectness_scores"], dim=-1)[:, :, -1]
             object_mask = objectness > self.objectness_thresh
+            data_dict["object_mask"] = object_mask
             has_objects = torch.any(object_mask, dim=1)
             vote_features = objectness.new_zeros((batch_size, self.vote_dimension))
             if torch.any(has_objects):

@@ -7,7 +7,7 @@ from models.attention_captioning import Attentive_Decoder
 
 
 class Scan2CapModel(nn.Module):
-    def __init__(self, vocab_list, embedding_dict, feature_channels=0, use_votenet=False, use_attention=False):
+    def __init__(self, vocab_list, embedding_dict, feature_channels=0, use_votenet=False, use_attention=False, objectness_thresh=.75):
         super().__init__()
         self.feature_channels = feature_channels
         self.use_votenet = use_votenet
@@ -19,9 +19,9 @@ class Scan2CapModel(nn.Module):
             # Only use xyz + height for now, because pretrained model does not use color or normal info
             self.votenet_extractor = VoteNetWrapperModule(input_feature_dim=1)
             if self.use_attention:
-                self.decoder = Attentive_Decoder(vocab_list=vocab_list, embedding_dict=embedding_dict)
+                self.decoder = Attentive_Decoder(vocab_list=vocab_list, embedding_dict=embedding_dict, objectness_threshold=objectness_thresh)
         if not self.use_attention:
-            self.decoder = Decoder(vocab_list=vocab_list, embedding_dict=embedding_dict, use_votenet=self.use_votenet)
+            self.decoder = Decoder(vocab_list=vocab_list, embedding_dict=embedding_dict, use_votenet=self.use_votenet, objectness_thresh=objectness_thresh)
         if self.use_attention and not self.use_votenet:
             raise Exception("Attention can't be used without votenet") 
         
