@@ -13,7 +13,7 @@ class Decoder(nn.Module):
     Decoder.
     """
 
-    def __init__(self, vocab_list, embedding_dict, use_votenet, embed_dim=300, vote_dimension=128, encoder_dim=256, decoder_dim=512, dropout=0.5):
+    def __init__(self, vocab_list, embedding_dict, use_votenet, embed_dim=300, vote_dimension=128, encoder_dim=256, decoder_dim=512, dropout=0.5, objectness_thresh=0.5):
         """
         :param embed_dim: embedding size
         :param decoder_dim: size of decoder's RNN
@@ -28,6 +28,7 @@ class Decoder(nn.Module):
         self.encoder_dim = encoder_dim 
         if self.use_votenet:
             self.encoder_dim += vote_dimension
+        self.objectness_thresh = objectness_thresh
         self.embed_dim = embed_dim
         self.decoder_dim = decoder_dim
         self.dropout = dropout
@@ -81,8 +82,17 @@ class Decoder(nn.Module):
         :return: scores for vocabulary, sorted encoded captions, decode lengths, weights, sort indices
         """
         obj_features = data_dict["ref_obj_features"]
+
+        batch_size = obj_features.shape[0]
+
         if self.use_votenet:
-            obj_features = torch.cat([torch.mean(data_dict["aggregated_vote_features"], dim=1), obj_features],dim=1)
+            objectness = torch.softmax(data_dict["objectness_scores"], dim=-1)[:, :, -1]
+            object_mask = objectness > self.objectness_thresh
+            has_objects = torch.any(object_mask, dim=1)
+            vote_features = objectness.new_zeros((batch_size, self.vote_dimension))
+            if torch.any(has_objects):
+                vote_features[has_objects] = torch.stack([torch.mean(features_[object_mask_], dim=0) for features_, object_mask_ in zip(data_dict["aggregated_vote_features"][has_objects], object_mask[has_objects])])
+            obj_features = torch.cat([vote_features, obj_features], dim=1)
         target_caption = data_dict["lang_indices"]
         target_caption_embeddings = self.idx2embedding[target_caption]
         target_caption_lengths = data_dict["lang_len"]
