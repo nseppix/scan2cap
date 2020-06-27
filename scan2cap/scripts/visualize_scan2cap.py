@@ -61,7 +61,7 @@ def get_model(args):
     # initiate model
     input_channels = int(args.use_multiview) * 128 + int(args.use_normal) * 3 + int(args.use_color) * 3 + int(
         not args.no_height)
-    model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels).cuda()
+    model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels, use_votenet=args.use_votenet, use_attention=args.use_attention).cuda()
     path = os.path.join(CONF.PATH.OUTPUT, args.folder, "model.pth")
     model.load_state_dict(torch.load(path), strict=False)
     del glove
@@ -105,13 +105,13 @@ def write_ply(verts, colors, indices, output_file):
         file.write('3 {:d} {:d} {:d}\n'.format(ind[0], ind[1], ind[2]))
     file.close()
 
-def write_bbox(bbox, mode, output_file):
+def write_bbox(bbox, output_file, votenet_bboxes_alphas=None):
     """
     bbox: (cx, cy, cz, lx, ly, lz, r), center and length in three axis, the last is the rotation
     output_file: string
 
     """
-    def create_cylinder_mesh(radius, p0, p1, stacks=10, slices=10):
+    def create_cylinder_mesh(radius, p0, p1, stacks=4, slices=4):
         
         import math
 
@@ -226,6 +226,17 @@ def write_bbox(bbox, mode, output_file):
 
         return corners
 
+    def edges_to_verts_indices(edges, color):
+        for k in range(len(edges)):
+            cyl_verts, cyl_ind = create_cylinder_mesh(radius, edges[k][0], edges[k][1])
+            cur_num_verts = len(verts)
+            cyl_color = [[c / 255 for c in color] for _ in cyl_verts]
+            cyl_verts = [x + offset for x in cyl_verts]
+            cyl_ind = [x + cur_num_verts for x in cyl_ind]
+            verts.extend(cyl_verts)
+            indices.extend(cyl_ind)
+            colors.extend(cyl_color)
+
     radius = 0.03
     offset = [0,0,0]
     verts = []
@@ -235,21 +246,22 @@ def write_bbox(bbox, mode, output_file):
 
     box_min = np.min(corners, axis=0)
     box_max = np.max(corners, axis=0)
-    palette = {
-        0: [0, 255, 0], # gt
-        1: [0, 0, 255]  # pred
-    }
-    chosen_color = palette[mode]
+
+    gt_color = [0, 255, 0]
     edges = get_bbox_edges(box_min, box_max)
-    for k in range(len(edges)):
-        cyl_verts, cyl_ind = create_cylinder_mesh(radius, edges[k][0], edges[k][1])
-        cur_num_verts = len(verts)
-        cyl_color = [[c / 255 for c in chosen_color] for _ in cyl_verts]
-        cyl_verts = [x + offset for x in cyl_verts]
-        cyl_ind = [x + cur_num_verts for x in cyl_ind]
-        verts.extend(cyl_verts)
-        indices.extend(cyl_ind)
-        colors.extend(cyl_color)
+
+    edges_to_verts_indices(edges, gt_color)
+
+    if votenet_bboxes_alphas is not None:
+        votenet_bboxes, votenet_alphas = votenet_bboxes_alphas
+        for vn_bbox, vn_alpha in zip(votenet_bboxes, votenet_alphas):
+            corners = get_bbox_corners(vn_bbox)
+            box_min = np.min(corners, axis=0)
+            box_max = np.max(corners, axis=0)
+            vn_edges = get_bbox_edges(box_min, box_max)
+
+            color = [255, int(vn_alpha * 255), int(vn_alpha * 255)]
+            edges_to_verts_indices(vn_edges, color)
 
     write_ply(verts, colors, indices, output_file)
 
@@ -383,8 +395,33 @@ def dump_results(args, scanrefer, data, config):
         gt_obb[3:6] = gt_size_residual[i]
         gt_bbox = get_3d_box(gt_size_residual[i], 0, gt_center[i])
 
+        if "aggregated_vote_features" in data:
+            centers = data["aggregated_vote_xyz"][i].cpu()
+            size_classes = torch.argmax(data['size_scores'][i], dim=1, keepdim=True).cpu()
+            sizes = torch.gather(data["size_residuals"][i].cpu(), dim=1, index=size_classes.unsqueeze(2).expand(-1, 1, 3)).squeeze(1)
+            objectness = torch.softmax(data["objectness_scores"][i], dim=-1)[:,1].cpu()
+
+            sizes = torch.stack([torch.tensor(config.param2obb(center.numpy(), 0, 0, cls.numpy(), size.numpy()))[3:6] for center, cls, size in zip(centers, size_classes, sizes)]).to(dtype=torch.float32)
+
+            print(centers.shape, size_classes.shape, sizes.shape, objectness.shape)
+
+            # alphas = data["alphas"][i]
+
+            bboxes = torch.cat([centers, sizes], dim=1)
+
+            # print(centers[0], sizes[0], bboxes[0], objectness[0])
+
+            objectness_masks = objectness > .5
+            objectness = objectness[objectness_masks]
+            bboxes = bboxes[objectness_masks, :]
+
+            votenet_bboxes_alphas = (bboxes.numpy(), objectness.cpu().numpy())
+        else:
+            votenet_bboxes_alphas = None
+
+
         if not os.path.exists(object_dump_dir):
-            write_bbox(gt_obb, 0, os.path.join(object_dump_dir))
+            write_bbox(gt_obb, os.path.join(object_dump_dir), votenet_bboxes_alphas)
         
 
 def visualize(args):
@@ -432,6 +469,8 @@ if __name__ == "__main__":
     parser.add_argument('--use_multiview', action='store_true', help='Use multiview images.')
     parser.add_argument('--pnextractor_cp', type=str, help="Checkpoint location for pointnet extractor.", default=None)
     parser.add_argument('--decoder_cp', type=str, help="Checkpoint location for LSTM decoder.", default=None)
+    parser.add_argument('--use_votenet', action='store_true', help="Use votenet as additional feature extractor. (Required for attention)")
+    parser.add_argument('--use_attention', action='store_true', help="Use attention for captioning, only works if votenet is used")
     parser.add_argument('--cp', type=str, help="Checkpoint location for Scan2Cap model.", default=None)
     args = parser.parse_args()
 

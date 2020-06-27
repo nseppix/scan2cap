@@ -42,6 +42,8 @@ EPOCH_REPORT_TEMPLATE = """
 [train] train_cider: {train_cider}
 [val]   val_loss: {val_loss}
 [val]   val_bleu4: {val_bleu4}
+[val]   val_meteor: {val_meteor}
+[val]   val_rouge: {val_rouge}
 [val]   val_cider: {val_cider}
 """
 
@@ -57,7 +59,7 @@ BEST_REPORT_TEMPLATE = """
 """
 
 class SolverCaptioning():
-    def __init__(self, model, config, dataloader, optimizer, stamp, vocabulary, attention, val_step=10, early_stopping=-1, only_val=False):
+    def __init__(self, model, config, dataloader, optimizer, stamp, vocabulary, attention=False, val_step=10, early_stopping=-1, only_val=False):
         self.epoch = 0                    # set in __call__
         self.verbose = 0                  # set in __call__
         
@@ -218,6 +220,7 @@ class SolverCaptioning():
                 "loss": 0,
                 # acc
                 "bleu4": 0,
+                "meteor": 0,
                 "rouge": 0,
                 "cider": 0
             }
