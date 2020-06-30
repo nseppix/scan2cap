@@ -14,7 +14,7 @@ class Attentive_Decoder(nn.Module):
     """
 
     def __init__(self, vocab_list, embedding_dict, attention_dim=512, embed_dim=300, vote_dimension=128,
-                 object_proposals =128, encoder_dim=256+128, decoder_dim=512, dropout=0.5, objectness_thresh=0.5):
+                 object_proposals =128, encoder_dim=256+128, decoder_dim=512, dropout=0.5, objectness_thresh=0.9):
         """
         :param embed_dim: embedding size
         :param decoder_dim: size of decoder's RNN

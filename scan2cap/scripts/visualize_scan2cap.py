@@ -9,7 +9,7 @@ import torch
 from plyfile import PlyData, PlyElement
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-
+sys.path.append(os.path.join(os.getcwd()))
 from models.scan2cap_model import Scan2CapModel
 
 sys.path.append(os.path.join(os.getcwd())) # HACK add the root folder
@@ -405,8 +405,6 @@ def dump_results(args, scanrefer, data, config):
 
             print(centers.shape, size_classes.shape, sizes.shape, objectness.shape)
 
-            # alphas = data["alphas"][i]
-
             bboxes = torch.cat([centers, sizes], dim=1)
 
             # print(centers[0], sizes[0], bboxes[0], objectness[0])
@@ -414,15 +412,26 @@ def dump_results(args, scanrefer, data, config):
             objectness_masks = objectness > .75
             objectness = objectness[objectness_masks]
             bboxes = bboxes[objectness_masks, :]
+           
 
             votenet_bboxes_alphas = (bboxes.numpy(), objectness.cpu().numpy())
+            
+            if "alphas" in data:
+                alphas = data["alphas"][i]
+                alphas = alphas[:, objectness_masks]
+
+                for i, alphas_i in enumerate(alphas):
+                    if not os.path.exists(object_dump_dir):
+                        alphas_timestep = (bboxes.numpy(), alphas_i.cpu().numpy())
+                        write_bbox(gt_obb, os.path.join(object_dump_dir[:-5]+"attention_timestep{:d}.ply".format(i)), alphas_timestep)
         else:
             votenet_bboxes_alphas = None
-
 
         if not os.path.exists(object_dump_dir):
             write_bbox(gt_obb, os.path.join(object_dump_dir), votenet_bboxes_alphas)
         
+        
+
 
 def visualize(args):
     # init training dataset
