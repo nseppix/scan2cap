@@ -25,6 +25,8 @@ ITER_REPORT_TEMPLATE = """
 [sco.] train_meteor: {train_meteor}
 [sco.] train_rouge: {train_rouge}
 [sco.] train_cider: {train_cider}
+[sco.] train_attention_max: {train_attention_max}
+[sco.] train_attention_max: {train_attention_var}
 [info] mean_fetch_time: {mean_fetch_time}s
 [info] mean_forward_time: {mean_forward_time}s
 [info] mean_backward_time: {mean_backward_time}s
@@ -40,11 +42,16 @@ EPOCH_REPORT_TEMPLATE = """
 [train] train_meteor: {train_meteor}
 [train] train_rouge: {train_rouge}
 [train] train_cider: {train_cider}
+[train] train_attention_max: {train_attention_max}
+[train] train_attention_var: {train_attention_var}
 [val]   val_loss: {val_loss}
 [val]   val_bleu4: {val_bleu4}
 [val]   val_meteor: {val_meteor}
 [val]   val_rouge: {val_rouge}
 [val]   val_cider: {val_cider}
+[val]   val_attention_max: {val_attention_max}
+[val]   val_attention_var: {val_attention_var}
+
 """
 
 BEST_REPORT_TEMPLATE = """
@@ -55,6 +62,8 @@ BEST_REPORT_TEMPLATE = """
 [sco.] meteor: {meteor}
 [sco.] rouge: {rouge}
 [sco.] cider: {cider}
+[sco.] attention_max: {attention_max}
+[sco.] attention_var: {attention_var}
 
 """
 
@@ -82,7 +91,9 @@ class SolverCaptioning():
             "bleu4": -float("inf"),
             "meteor": -float("inf"),
             "rouge": -float("inf"),
-            "cider": -float("inf")
+            "cider": -float("inf"), 
+            "attention_max": -float("inf"),
+            "attention_max": -float("inf")
         }
 
         # log
@@ -101,7 +112,9 @@ class SolverCaptioning():
                 "bleu4": [],
                 "meteor": [],
                 "rouge": [],
-                "cider": []
+                "cider": [],
+                "attention_max": [],
+                "attention_var": [], 
 
             } for phase in ["train", "val"]
         }
@@ -222,7 +235,8 @@ class SolverCaptioning():
                 "bleu4": 0,
                 "meteor": 0,
                 "rouge": 0,
-                "cider": 0
+                "cider": 0, 
+                "attention_max":0
             }
 
             # load
@@ -253,7 +267,9 @@ class SolverCaptioning():
             self.log[phase]["meteor"].append(self._running_log["meteor"])
             self.log[phase]["rouge"].append(self._running_log["rouge"])
             self.log[phase]["cider"].append(self._running_log["cider"])
-
+            self.log[phase]["attention_max"].append(self._running_log["attention_max"])
+            self.log[phase]["attention_var"].append(self._running_log["attention_var"])
+    
             # report
             if phase == "train":
                 iter_time = self.log[phase]["fetch"][-1]
@@ -296,6 +312,8 @@ class SolverCaptioning():
                 self.best["meteor"] = np.mean(self.log[phase]["meteor"])
                 self.best["rouge"] = np.mean(self.log[phase]["rouge"])
                 self.best["cider"] = np.mean(self.log[phase]["cider"])
+                self.best["attention_max"] = np.mean(self.log[phase]["attention_max"])
+                self.best["attention_var"] = np.mean(self.log[phase]["attention_var"])
 
                 if self.only_val:
                     return
@@ -318,6 +336,8 @@ class SolverCaptioning():
         self._running_log["meteor"] = data_dict["meteor"]
         self._running_log["rouge"] = data_dict["rouge"]
         self._running_log["cider"] = data_dict["cider"]
+        self._running_log["attention_max"] = data_dict["attention_max"]
+        self._running_log["attention_var"] = data_dict["attention_var"]
 
     def _dump_log(self, phase):
         log = {
@@ -326,6 +346,8 @@ class SolverCaptioning():
             "meteor": ["meteor"],
             "rouge": ["rouge"],
             "cider": ["cider"],
+            "attention_max": ["attention_max"],
+            "attention_var": ["attention_var"],
         }
         for key in log:
             for item in log[key]:
@@ -373,6 +395,8 @@ class SolverCaptioning():
             train_meteor=round(np.mean([v for v in self.log["train"]["meteor"]]), 5),
             train_rouge=round(np.mean([v for v in self.log["train"]["rouge"]]), 5),
             train_cider=round(np.mean([v for v in self.log["train"]["cider"]]), 5),
+            train_attention_max=round(np.mean([v for v in self.log["train"]["attention_max"]]), 5),
+            train_attention_var=round(np.mean([v for v in self.log["train"]["attention_var"]]), 5),            
             mean_fetch_time=round(np.mean(fetch_time), 5),
             mean_forward_time=round(np.mean(forward_time), 5),
             mean_backward_time=round(np.mean(backward_time), 5),
@@ -392,11 +416,15 @@ class SolverCaptioning():
             train_meteor=round(np.mean([v for v in self.log["train"]["meteor"]]), 5),
             train_rouge=round(np.mean([v for v in self.log["train"]["rouge"]]), 5),
             train_cider=round(np.mean([v for v in self.log["train"]["cider"]]), 5),
+            train_attention_max=round(np.mean([v for v in self.log["train"]["attention_max"]]), 5),
+            train_attention_var=round(np.mean([v for v in self.log["train"]["attention_var"]]), 5),
             val_loss=round(np.mean([v for v in self.log["val"]["loss"]]), 5),
             val_bleu4=round(np.mean([v for v in self.log["val"]["bleu4"]]), 5),
             val_meteor=round(np.mean([v for v in self.log["val"]["meteor"]]), 5),
             val_rouge=round(np.mean([v for v in self.log["val"]["rouge"]]), 5),
             val_cider=round(np.mean([v for v in self.log["val"]["cider"]]), 5),
+            val_attention_max=round(np.mean([v for v in self.log["val"]["attention_max"]]), 5),
+            val_attention_var=round(np.mean([v for v in self.log["val"]["attention_var"]]), 5),
         )
         self._log(epoch_report)
     
@@ -409,6 +437,9 @@ class SolverCaptioning():
             meteor=round(self.best["meteor"], 5),
             rouge=round(self.best["rouge"], 5),
             cider=round(self.best["cider"], 5),
+            attention_max=round(self.best["attention_max"], 5),
+            attention_var=round(self.best["attention_max"], 5),
+
         )
         self._log(best_report)
         with open(os.path.join(CONF.PATH.OUTPUT, self.stamp, "best.txt"), "w") as f:

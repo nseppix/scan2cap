@@ -12,7 +12,6 @@ import sys
 import os
 import time
 
-
 sys.path.append(os.path.join(os.getcwd(), "lib")) # HACK add the lib folder
 sys.path.append(os.path.join(os.getcwd(), "utils")) # HACK add the utils folder
 sys.path.append(os.path.join(os.getcwd(), "utils/pycocoevalcap"))
@@ -25,7 +24,6 @@ from utils.pycocoevalcap.bleu.bleu import Bleu
 from utils.meteor import *
 from utils.pycocoevalcap.rouge.rouge import Rouge
 from utils.pycocoevalcap.cider.cider import Cider
-
 
 FAR_THRESHOLD = 0.6
 NEAR_THRESHOLD = 0.3
@@ -502,6 +500,12 @@ def caption_loss(data_dict, vocabulary):
     data_dict["rouge"]= rouge
     data_dict["meteor"] = meteor
     data_dict["cider"] = cider
+    att = data_dict["alphas"].detach().cpu().numpy()
+    att_max = np.max(att)
+    att_var = np.var(att, axis=-1)
+    att_var = np.mean(att_var) 
+    data_dict["attention_max"] = att_max
+    data_dict["attention_var"] = att_var
     
     return loss, data_dict
 
