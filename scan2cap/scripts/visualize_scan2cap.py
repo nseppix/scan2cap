@@ -62,7 +62,8 @@ def get_model(args):
     input_channels = int(args.use_multiview) * 128 + int(args.use_normal) * 3 + int(args.use_color) * 3 + int(
         not args.no_height)
     model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels, use_votenet=args.use_votenet, use_attention=args.use_attention).cuda()
-    path = os.path.join(CONF.PATH.OUTPUT, args.folder, "model.pth")
+    # path = os.path.join(CONF.PATH.OUTPUT, args.folder, "model.pth")
+    path = os.path.join(CONF.PATH.OUTPUT, args.folder, "model_last.pth")
     model.load_state_dict(torch.load(path), strict=False)
     del glove
     return model
@@ -254,7 +255,7 @@ def write_bbox(bbox, output_file, votenet_bboxes_alphas=None):
 
     if votenet_bboxes_alphas is not None:
         votenet_bboxes, votenet_alphas = votenet_bboxes_alphas
-        for vn_bbox, vn_alpha in zip(votenet_bboxes, votenet_alphas):
+        for vn_bbox, vn_alpha in list(sorted(zip(votenet_bboxes, votenet_alphas), key=lambda x: x[1], reverse=True))[:16]:
             corners = get_bbox_corners(vn_bbox)
             box_min = np.min(corners, axis=0)
             box_max = np.max(corners, axis=0)
@@ -423,7 +424,10 @@ def dump_results(args, scanrefer, data, config):
                 for i, alphas_i in enumerate(alphas):
                     if not os.path.exists(object_dump_dir):
                         alphas_timestep = (bboxes.numpy(), alphas_i.cpu().numpy())
-                        write_bbox(gt_obb, os.path.join(object_dump_dir[:-5]+"attention_timestep{:d}.ply".format(i)), alphas_timestep)
+                        dir = object_dump_dir[:-4] + "_attention"
+                        if not os.path.exists(dir):
+                            os.mkdir(dir)
+                        write_bbox(gt_obb, os.path.join(dir, f"timestep{i:02d}.ply"), alphas_timestep)
         else:
             votenet_bboxes_alphas = None
 

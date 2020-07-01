@@ -14,7 +14,8 @@ class Attentive_Decoder(nn.Module):
     """
 
     def __init__(self, vocab_list, embedding_dict, attention_dim=512, embed_dim=300, vote_dimension=128,
-                 object_proposals =128, encoder_dim=256+128, decoder_dim=512, dropout=0.5, objectness_thresh=0.9):
+                 object_proposals =128, encoder_dim=256+128, decoder_dim=512, dropout=0.5, objectness_thresh=0.75,
+                 n_closest=16):
         """
         :param embed_dim: embedding size
         :param decoder_dim: size of decoder's RNN
@@ -30,6 +31,7 @@ class Attentive_Decoder(nn.Module):
         self.vote_dimension = vote_dimension
         self.object_proposals = object_proposals
         self.objectness_thresh =objectness_thresh
+        self.n_closest = n_closest
         self.dropout = dropout
 
         # attention part 
@@ -89,8 +91,13 @@ class Attentive_Decoder(nn.Module):
         target_caption = data_dict["lang_indices"]
         batch_size = obj_features.size(0)
         objectness = torch.softmax(data_dict["objectness_scores"], dim=-1)[:, :, -1]
+        distance = torch.norm(data_dict["ref_center_label"].unsqueeze(1) - data_dict["aggregated_vote_xyz"], dim=2)
         object_mask = objectness > self.objectness_thresh
-        
+        distance[~object_mask] = float("inf")
+        max_distances = torch.max(torch.topk(distance, self.n_closest, dim=-1, largest=False)[0], dim=1, keepdim=True)[0]
+        distance_mask = distance <= max_distances
+        object_mask &= distance_mask
+
         
         target_caption_embeddings = self.idx2embedding[target_caption]
         target_caption_lengths = data_dict["lang_len"]
@@ -240,7 +247,10 @@ class Attention(nn.Module):
         alpha = torch.zeros_like(att)
         
         for i, (att_, object_mask_) in enumerate(zip(att,object_mask)):
-            alpha[i][object_mask_] = self.softmax(att_[object_mask_])    # (batch_size, num_pixels)
+            if torch.any(object_mask_):
+                alpha[i][object_mask_] = self.softmax(att_[object_mask_])    # (batch_size, num_pixels)
         attention_weighted_encoding = (encoder_out * alpha.unsqueeze(2)).sum(dim=1)  # (batch_size, encoder_dim)
+
+        print(torch.topk(alpha, 4, dim=1))
 
         return attention_weighted_encoding, alpha
