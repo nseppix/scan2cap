@@ -13,7 +13,7 @@ class Decoder(nn.Module):
     Decoder.
     """
 
-    def __init__(self, vocab_list, embedding_dict, use_votenet, embed_dim=300, vote_dimension=128, encoder_dim=256, decoder_dim=512, dropout=0.5, objectness_thresh=0.75):
+    def __init__(self, vocab_list, embedding_dict, use_votenet, embed_dim=300, vote_dimension=128, encoder_dim=256, decoder_dim=512, dropout=0.5, objectness_thresh=0.75, n_closest=32):
         """
         :param embed_dim: embedding size
         :param decoder_dim: size of decoder's RNN
@@ -31,6 +31,7 @@ class Decoder(nn.Module):
         self.objectness_thresh = objectness_thresh
         self.embed_dim = embed_dim
         self.decoder_dim = decoder_dim
+        self.n_closest = n_closest
         self.dropout = dropout
         
 
@@ -53,6 +54,7 @@ class Decoder(nn.Module):
         self.f_beta = nn.Linear(self.decoder_dim, self.encoder_dim)  # linear layer to create a sigmoid-activated gate
         self.fc = nn.Linear(self.decoder_dim, self.vocab_size)  # linear layer to find scores over vocabulary
         self.init_weights()  # initialize some layers with the uniform distribution
+        print(n_closest, objectness_thresh)
 
     def init_weights(self):
         """
@@ -87,9 +89,15 @@ class Decoder(nn.Module):
 
         if self.use_votenet:
             objectness = torch.softmax(data_dict["objectness_scores"], dim=-1)[:, :, -1]
+            distance = torch.norm(data_dict["ref_center_label"].unsqueeze(1) - data_dict["aggregated_vote_xyz"], dim=2)
             object_mask = objectness > self.objectness_thresh
-            data_dict["object_mask"] = object_mask
+            print(torch.sum(object_mask.to(dtype=torch.int32), dim=1))
+            distance[~object_mask] = float("inf")
+            max_distances = torch.max(torch.topk(distance, self.n_closest, dim=-1, largest=False)[0], dim=1, keepdim=True)[0]
+            distance_mask = distance <= max_distances
+            object_mask &= distance_mask
             has_objects = torch.any(object_mask, dim=1)
+            # print(torch.softmax(data_dict["objectness_scores"], dim=-1))
             vote_features = objectness.new_zeros((batch_size, self.vote_dimension))
             if torch.any(has_objects):
                 vote_features[has_objects] = torch.stack([torch.mean(features_[object_mask_], dim=0) for features_, object_mask_ in zip(data_dict["aggregated_vote_features"][has_objects], object_mask[has_objects])])
