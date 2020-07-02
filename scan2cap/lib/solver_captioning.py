@@ -206,7 +206,7 @@ class SolverCaptioning():
 
     def _compute_loss(self, data_dict):
         _, data_dict = caption_loss(data_dict, self.vocabulary)
-        if self.attention: data_dict = attention_regularization(data_dict)  
+        #if self.attention: data_dict = attention_regularization(data_dict)
 
         # dump
         self._running_log["loss"] = data_dict["loss"]

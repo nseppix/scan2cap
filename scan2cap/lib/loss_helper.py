@@ -500,10 +500,14 @@ def caption_loss(data_dict, vocabulary):
     data_dict["rouge"]= rouge
     data_dict["meteor"] = meteor
     data_dict["cider"] = cider
-    att = data_dict["alphas"].detach().cpu().numpy()
-    att_max = np.max(att)
-    att_var = np.var(att, axis=-1)
-    att_var = np.mean(att_var) 
+    if "alphas" in data_dict:
+        att = data_dict["alphas"].detach().cpu().numpy()
+        att_max = np.max(att)
+        att_var = np.var(att, axis=-1)
+        att_var = np.mean(att_var)
+    else:
+        att_max = 0
+        att_var = 0
     data_dict["attention_max"] = att_max
     data_dict["attention_var"] = att_var
     
