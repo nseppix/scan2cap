@@ -61,9 +61,9 @@ def get_model(args):
     # initiate model
     input_channels = int(args.use_multiview) * 128 + int(args.use_normal) * 3 + int(args.use_color) * 3 + int(
         not args.no_height)
-    model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels, use_votenet=args.use_votenet, use_attention=args.use_attention).cuda()
-    # path = os.path.join(CONF.PATH.OUTPUT, args.folder, "model.pth")
-    path = os.path.join(CONF.PATH.OUTPUT, args.folder, "model_last.pth")
+    model = Scan2CapModel(vocab_list=VOCABULARY, embedding_dict=glove, feature_channels=input_channels, use_votenet=args.use_votenet, use_attention=args.use_attention, objectness_thresh=args.objectness_thresh, n_closest=args.n_closest).cuda()
+    path = os.path.join(CONF.PATH.OUTPUT, args.folder, "model.pth")
+    # path = os.path.join(CONF.PATH.OUTPUT, args.folder, "model_last.pth")
     model.load_state_dict(torch.load(path), strict=False)
     del glove
     return model
@@ -261,7 +261,9 @@ def write_bbox(bbox, output_file, votenet_bboxes_alphas=None):
             box_max = np.max(corners, axis=0)
             vn_edges = get_bbox_edges(box_min, box_max)
 
-            color = [255, int(vn_alpha * 255), int(vn_alpha * 255)]
+            # print(vn_alpha)
+
+            color = [int((1-vn_alpha) * 255), 0, int(vn_alpha * 255)]
             edges_to_verts_indices(vn_edges, color)
 
     write_ply(verts, colors, indices, output_file)
@@ -363,6 +365,8 @@ def dump_results(args, scanrefer, data, config):
     # print("NYU40_LABEL", [DC.nyu40id2label[i] for i in list(nyu40_label)])
     # print("PREDICTION", [DC.nyu40id2label[i] for i in list(prediction)])
     # print("ACC", global_correct / global_total)
+    # print(torch.max(data["alphas"]))
+    # print(torch.mean(torch.sum((data["alphas"][:, 0, :] > 0).to(dtype=torch.float32), dim=1)))
 
     for i in range(batch_size):
         # basic info
@@ -404,13 +408,14 @@ def dump_results(args, scanrefer, data, config):
 
             sizes = torch.stack([torch.tensor(config.param2obb(center.numpy(), 0, 0, cls.numpy(), size.numpy()))[3:6] for center, cls, size in zip(centers, size_classes, sizes)]).to(dtype=torch.float32)
 
-            print(centers.shape, size_classes.shape, sizes.shape, objectness.shape)
+            # print(centers.shape, size_classes.shape, sizes.shape, objectness.shape)
 
             bboxes = torch.cat([centers, sizes], dim=1)
 
             # print(centers[0], sizes[0], bboxes[0], objectness[0])
 
-            objectness_masks = objectness > .75
+            #objectness_masks = objectness > .5
+            objectness_masks = data["object_mask"][i]
             objectness = objectness[objectness_masks]
             bboxes = bboxes[objectness_masks, :]
            
@@ -421,13 +426,16 @@ def dump_results(args, scanrefer, data, config):
                 alphas = data["alphas"][i]
                 alphas = alphas[:, objectness_masks]
 
-                for i, alphas_i in enumerate(alphas):
+                for j, alphas_i in enumerate(alphas):
+                    if torch.max(alphas_i) == 0:
+                        break
+
                     if not os.path.exists(object_dump_dir):
                         alphas_timestep = (bboxes.numpy(), alphas_i.cpu().numpy())
                         dir = object_dump_dir[:-4] + "_attention"
                         if not os.path.exists(dir):
                             os.mkdir(dir)
-                        write_bbox(gt_obb, os.path.join(dir, f"timestep{i:02d}.ply"), alphas_timestep)
+                        write_bbox(gt_obb, os.path.join(dir, f"timestep{j:02d}_{VOCABULARY[hypo[i, j]]}.ply"), alphas_timestep)
         else:
             votenet_bboxes_alphas = None
 
@@ -441,6 +449,19 @@ def visualize(args):
     # init training dataset
     print("preparing data...")
     scanrefer, scene_list = get_scanrefer(args)
+
+    scanrefer = [s for s in scanrefer if s["scene_id"] in ["scene0064_00",
+                                                           "scene0100_00",
+                                                           "scene0086_00",
+                                                           "scene0081_00",
+                                                           "scene0084_00",
+                                                           "scene0164_00",
+                                                           "scene0193_00",
+                                                           "scene0144_00",
+                                                           "scene0221_00",
+                                                           "scene0203_00",
+                                                           "scene0222_00",
+                                                           "scene0231_00"]]
 
     # dataloader
     _, dataloader = get_dataloader(args, scanrefer, scene_list, "val", DC, False)
@@ -484,6 +505,8 @@ if __name__ == "__main__":
     parser.add_argument('--decoder_cp', type=str, help="Checkpoint location for LSTM decoder.", default=None)
     parser.add_argument('--use_votenet', action='store_true', help="Use votenet as additional feature extractor. (Required for attention)")
     parser.add_argument('--use_attention', action='store_true', help="Use attention for captioning, only works if votenet is used")
+    parser.add_argument('--objectness_thresh', type=float, help="Threshold for accepting objects proposed by votenet", default=.75)
+    parser.add_argument('--n_closest', type=int, help="Number of n closest votenet proposals are considered", default=32)
     parser.add_argument('--cp', type=str, help="Checkpoint location for Scan2Cap model.", default=None)
     args = parser.parse_args()
 
