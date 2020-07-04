@@ -421,6 +421,7 @@ def dump_results(args, scanrefer, data, config):
            
 
             votenet_bboxes_alphas = (bboxes.numpy(), objectness.cpu().numpy())
+            write_bbox(gt_obb, os.path.join(object_dump_dir)[:-4] + "_votenet.ply", votenet_bboxes_alphas)
             
             if "alphas" in data:
                 alphas = data["alphas"][i]
@@ -440,7 +441,7 @@ def dump_results(args, scanrefer, data, config):
             votenet_bboxes_alphas = None
 
         if not os.path.exists(object_dump_dir):
-            write_bbox(gt_obb, os.path.join(object_dump_dir), votenet_bboxes_alphas)
+            write_bbox(gt_obb, os.path.join(object_dump_dir))
         
         
 
