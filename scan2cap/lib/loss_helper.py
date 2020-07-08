@@ -510,6 +510,18 @@ def caption_loss(data_dict, vocabulary):
         att_var = 0
     data_dict["attention_max"] = att_max
     data_dict["attention_var"] = att_var
+
+    caption_length_gen = 0
+    caption_length_gt = 0
+
+    if "caption_indices" in data_dict:
+        for i in range(targets.size(0)):
+            caption_length_gen  += data_dict["caption_indices"][i].shape[0]
+            caption_length_gt += data_dict["lang_len"][i].detach().cpu().numpy()
+    else:
+        caption_length_gen = 1
+        caption_length_gt = 1 
+    data_dict["caption_ratio"] = caption_length_gen / caption_length_gt
     
     return loss, data_dict
 

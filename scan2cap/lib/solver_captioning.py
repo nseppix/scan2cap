@@ -93,7 +93,8 @@ class SolverCaptioning():
             "rouge": -float("inf"),
             "cider": -float("inf"), 
             "attention_max": -float("inf"),
-            "attention_max": -float("inf")
+            "attention_max": -float("inf"), 
+            "caption_ratio": -float("inf"),
         }
 
         # log
@@ -115,6 +116,7 @@ class SolverCaptioning():
                 "cider": [],
                 "attention_max": [],
                 "attention_var": [], 
+                "caption_ratio": [], 
 
             } for phase in ["train", "val"]
         }
@@ -206,7 +208,7 @@ class SolverCaptioning():
 
     def _compute_loss(self, data_dict):
         _, data_dict = caption_loss(data_dict, self.vocabulary)
-        #if self.attention: data_dict = attention_regularization(data_dict)
+        if self.attention: data_dict = attention_regularization(data_dict, 0.5)
 
         # dump
         self._running_log["loss"] = data_dict["loss"]
@@ -236,7 +238,8 @@ class SolverCaptioning():
                 "meteor": 0,
                 "rouge": 0,
                 "cider": 0, 
-                "attention_max":0
+                "attention_max":0,
+                "caption_ratio":0
             }
 
             # load
@@ -269,6 +272,7 @@ class SolverCaptioning():
             self.log[phase]["cider"].append(self._running_log["cider"])
             self.log[phase]["attention_max"].append(self._running_log["attention_max"])
             self.log[phase]["attention_var"].append(self._running_log["attention_var"])
+            self.log[phase]["caption_ratio"].append(self._running_log["caption_ratio"])
     
             # report
             if phase == "train":
@@ -314,6 +318,7 @@ class SolverCaptioning():
                 self.best["cider"] = np.mean(self.log[phase]["cider"])
                 self.best["attention_max"] = np.mean(self.log[phase]["attention_max"])
                 self.best["attention_var"] = np.mean(self.log[phase]["attention_var"])
+                self.best["caption_ratio"] = np.mean(self.log[phase]["caption_ratio"])
 
                 if self.only_val:
                     return
@@ -338,6 +343,7 @@ class SolverCaptioning():
         self._running_log["cider"] = data_dict["cider"]
         self._running_log["attention_max"] = data_dict["attention_max"]
         self._running_log["attention_var"] = data_dict["attention_var"]
+        self._running_log["caption_ratio"] = data_dict["caption_ratio"]
 
     def _dump_log(self, phase):
         log = {
@@ -348,6 +354,8 @@ class SolverCaptioning():
             "cider": ["cider"],
             "attention_max": ["attention_max"],
             "attention_var": ["attention_var"],
+            "caption_ratio": ["caption_ratio"],
+            
         }
         for key in log:
             for item in log[key]:
