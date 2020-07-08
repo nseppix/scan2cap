@@ -514,14 +514,15 @@ def caption_loss(data_dict, vocabulary):
     caption_length_gen = 0
     caption_length_gt = 0
 
+    batch_caption_lengths = (data_dict["caption_indices"] > 0).to(dtype=torch.int32).sum(dim=1)
+
     if "caption_indices" in data_dict:
-        for i in range(targets.size(0)):
-            caption_length_gen  += data_dict["caption_indices"][i].shape[0]
-            caption_length_gt += data_dict["lang_len"][i].detach().cpu().numpy()
+        caption_length_gen += batch_caption_lengths.sum()
+        caption_length_gt += data_dict["lang_len"].sum()
     else:
         caption_length_gen = 1
         caption_length_gt = 1 
-    data_dict["caption_ratio"] = caption_length_gen / caption_length_gt
+    data_dict["caption_ratio"] = (caption_length_gen / caption_length_gt).detach().cpu().numpy()
     
     return loss, data_dict
 
