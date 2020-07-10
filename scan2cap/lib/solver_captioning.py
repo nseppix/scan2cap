@@ -16,6 +16,7 @@ sys.path.append(os.path.join(os.getcwd(), "lib")) # HACK add the lib folder
 from lib.config import CONF
 from lib.loss_helper import get_loss, caption_loss, attention_regularization
 from utils.eta import decode_eta
+from utils.utils_lstm import clip_gradient
 
 
 ITER_REPORT_TEMPLATE = """
@@ -68,7 +69,7 @@ BEST_REPORT_TEMPLATE = """
 """
 
 class SolverCaptioning():
-    def __init__(self, model, config, dataloader, optimizer, stamp, vocabulary, attention=False, val_step=10, early_stopping=-1, only_val=False):
+    def __init__(self, model, config, dataloader, optimizer, stamp, vocabulary, attention=False, val_step=10, early_stopping=-1, only_val=False, gradient_clip=None):
         self.epoch = 0                    # set in __call__
         self.verbose = 0                  # set in __call__
         
@@ -84,6 +85,7 @@ class SolverCaptioning():
         self.vocabulary = vocabulary
         self.attention = attention
         self.only_val = only_val
+        self.gradient_clip = gradient_clip
 
         self.best = {
             "epoch": 0,
@@ -204,6 +206,8 @@ class SolverCaptioning():
         # optimize
         self.optimizer.zero_grad()
         self._running_log["loss"].backward()
+        if self.gradient_clip is not None:
+            clip_gradient(self.optimizer, grad_clip=self.gradient_clip)
         self.optimizer.step()
 
     def _compute_loss(self, data_dict):

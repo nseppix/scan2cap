@@ -73,7 +73,7 @@ def get_solver(args, dataloader, stamp):
     model = get_model(args)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     vocabulary = VOCABULARY 
-    solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, vocabulary, args.use_attention, args.val_step , early_stopping=args.es, only_val=args.only_val)
+    solver = SolverCaptioning(model, DC, dataloader, optimizer, stamp, vocabulary, args.use_attention, args.val_step , early_stopping=args.es, only_val=args.only_val,gradient_clip=args.gradient_clip)
     if args.pnextractor_cp is not None:
         pnextractor_cp = torch.load(args.pnextractor_cp)
         model.load_pn_extractor(pnextractor_cp)
@@ -194,6 +194,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_attention', action='store_true', help="Use attention for captioning, only works if votenet is used")
     parser.add_argument('--objectness_thresh', type=float, help="Threshold for accepting objects proposed by votenet", default=.75)
     parser.add_argument('--n_closest', type=int, help="Number of n closest votenet proposals are considered", default=32)
+    parser.add_argument('--gradient_clip', type=float, help="Clip gradients", default=None)
     args = parser.parse_args()
 
     # setting

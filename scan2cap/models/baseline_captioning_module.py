@@ -33,7 +33,8 @@ class Decoder(nn.Module):
         self.decoder_dim = decoder_dim
         self.n_closest = n_closest
         self.dropout = dropout
-        
+
+        print(self.__dict__)
 
         self.vocab_size = len(vocab_list)
         embedding_dict["<end>"] = np.zeros(self.embed_dim)
@@ -96,6 +97,7 @@ class Decoder(nn.Module):
             max_distances = torch.max(torch.topk(distance, self.n_closest, dim=-1, largest=False)[0], dim=1, keepdim=True)[0]
             distance_mask = distance <= max_distances
             object_mask &= distance_mask
+            data_dict["object_mask"] = object_mask
             has_objects = torch.any(object_mask, dim=1)
             # print(torch.softmax(data_dict["objectness_scores"], dim=-1))
             vote_features = objectness.new_zeros((batch_size, self.vote_dimension))

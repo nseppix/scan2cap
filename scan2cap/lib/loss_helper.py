@@ -518,7 +518,7 @@ def caption_loss(data_dict, vocabulary):
 
     if "caption_indices" in data_dict:
         caption_length_gen += batch_caption_lengths.sum()
-        caption_length_gt += data_dict["lang_len"].sum()
+        caption_length_gt += (data_dict["lang_len"] - 1).sum()
     else:
         caption_length_gen = 1
         caption_length_gt = 1 
