@@ -8,6 +8,7 @@
 \usepackage{amssymb}
 \usepackage[utf8]{inputenc}
 \usepackage{booktabs,tabularx,enumitem,ragged2e}
+\usepackage{subcaption}
 
 % Include other packages here, before hyperref.
 
@@ -55,12 +56,12 @@ Technical University of Munich\\
 
 %%%%%%%%% ABSTRACT
 \begin{abstract}
-In this work, we aim to investigate the task of generating a description for a target object in context to its environment in the 3D domain. To this end, we propose a pipeline which combines concepts from 3D object detection and visal attention-based captioning. The proposed pipeline first uses VoteNet to extract feature vectors of the scene. It then combines this information with the features of the object of interest, which are extracted by PointNet++, and feeds this data into an LSTM captioning mechanism, that generates a caption of the object in context of the scene.  
+In this work, we investigate the task of generating a description for a target object in context to its environment in the 3D domain. To this end, we propose a pipeline which combines concepts from 3D object detection and visual attention-based captioning. The proposed pipeline first uses VoteNet to extract feature vectors of the scene. It then combines this information with the features of the object of interest, which are extracted by PointNet++, and feeds this data into an LSTM captioning mechanism, that generates a caption of the object in context of the scene.
    
 \end{abstract}
 
 %%%%%%%%% BODY TEXT
-\section{Introduction}
+\section{Problem Statement \& Motivation}
 
 Extracting a detailed and semantic correct understanding of the layout of a 3D scene is crucial for many tasks, e.g. in robotics for navigation and interaction with objects. This includes relating the 3D positions of the objects and their spatial extent, so that a semantically correct description of the objects' environment is generated.
 However, to the best of our knowledge, there has been no work so far to generate a description of an object representation in point clouds or 3D data.
@@ -97,51 +98,34 @@ Because PointNet++ is pretrained to classify the object of interest there is no 
 
 Average pooling the feature vectors from VoteNet is not ideal as often only a small number of the object proposals is relevant for the final caption. Therefore, in the third model iteration we replace the average pooling step from before with an attention mechanism, as it is described in \cite{xu2015show}. The attention mechanism receives the hidden state of the captioning LSTM from the previous iteration and the feature vectors of the object proposals. It then uses a series of fully-connected layers to predict relevancy scores for the different object proposals that are turned into probabilities using the softmax function. Instead of average pooling, we can now multiply all feature vectors with their respective probability and sum over all of them. This approach allows our model to select the most relevant object for each token in the caption and make word predictions that better match the the context of the scene.
 
-\autoref{fig:pipeline} summarizes the project pipeline.
+\autoref{fig:architectures} summarizes the project architectures.
 
-%\begin{figure*}
-%	\centering
-%	\includegraphics[width=\textwidth]{figures/pipeline_sketch.pdf}
-%	\caption{Pipeline for project}
-%	\label{fig:pipeline}
-%\end{figure*}
+\section{Experiments \& Results}
 
-\begin{table*}
-	\centering
-	\begin{tabularx}{\textwidth}{l|l}
-	\textbf{Date} & \textbf{Milestones} \\
-	\hline
-	\textbf{First Presentation} & 
-	\begin{minipage}[t]{\textwidth}
-		\begin{itemize}[nosep, wide=0pt, leftmargin=*, after=\strut]
-			\item Get familiar with dataset
-			\item Test different sub components of pipeline (e.g. PointNet++, VoteNet and captioning mechanism)
-			\item Start implementing the pipeline
-			\item Optional: first training
-		\end{itemize}  
-	\end{minipage}\\
-	\hline
-	\textbf{Second Presentation} & 
-	\begin{minipage}[t]{\linewidth}
-		\begin{itemize}[nosep, wide=0pt, leftmargin=*, after=\strut]
-			\item Finish implementation of pipeline
-			\item Training and hyperparameter tuning
-			\item Set up concept for attention mechanism
-			\item Optional: start implementing attention
-		\end{itemize}  
-	\end{minipage}\\
-	\hline
-	\textbf{Final Presentation} & 
-	\begin{minipage}[t]{\linewidth}
-		\begin{itemize}[nosep, wide=0pt, leftmargin=*, after=\strut]
-			\item Final results
-			\item Optional: attention mechanism
-		\end{itemize}  
-	\end{minipage}\\
-	\end{tabularx}
-	\caption{Project milestones}
-	\label{tab:milestones}
-\end{table*}
+Placeholder text.
+
+\begin{figure*}
+	\begin{subfigure}[c]{\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{figures/arch_baseline.pdf}
+		\caption{Baseline model}
+		\label{fig:baseline}
+	\end{subfigure}
+	\begin{subfigure}[c]{\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{figures/arch_votenet.pdf}
+		\caption{Better feature extraction with VoteNet}
+		\label{fig:votenet}
+	\end{subfigure}
+	\begin{subfigure}[c]{\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{figures/arch_attention.pdf}
+		\caption{Better captioning with attention}
+		\label{fig:attention}
+	\end{subfigure}
+	\caption{Model architectures for project}
+	\label{fig:architectures}
+\end{figure*}
 
 {\small
 \bibliographystyle{ieee_fullname}
