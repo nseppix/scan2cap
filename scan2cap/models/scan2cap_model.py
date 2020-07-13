@@ -13,7 +13,7 @@ class Scan2CapModel(nn.Module):
         self.use_votenet = use_votenet
         self.use_attention = use_attention
 
-        self.pn_extractor = PointNetExtractor(feature_channels=feature_channels, pretrain_mode=False)
+        self.pn_extractor = PointNetExtractor(feature_channels=feature_channels, pretrain_mode=True)
         
         if self.use_votenet:
             # Only use xyz + height for now, because pretrained model does not use color or normal info

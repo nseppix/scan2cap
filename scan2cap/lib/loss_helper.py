@@ -526,7 +526,7 @@ def caption_loss(data_dict, vocabulary):
         batch_caption_lengths = (data_dict["caption_indices"] > 0).to(dtype=torch.int32).sum(dim=1)    
         data_dict["batch_caption_lenghts"] = batch_caption_lengths
         caption_length_gen += batch_caption_lengths.sum()
-        caption_length_gt += data_dict["lang_len"].sum()
+        caption_length_gt += (data_dict["lang_len"] - 1).sum()
     else:
         for li in data_dict["lang_indices"].detach().cpu().numpy():
             num_sent_train.append(sum([(x==17 or x==15) for x in li]))
