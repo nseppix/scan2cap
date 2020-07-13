@@ -513,13 +513,25 @@ def caption_loss(data_dict, vocabulary):
 
     caption_length_gen = 0
     caption_length_gt = 0
+    num_sent_val = []
+    num_sent_train = []
 
-    batch_caption_lengths = (data_dict["caption_indices"] > 0).to(dtype=torch.int32).sum(dim=1)
 
+
+    
     if "caption_indices" in data_dict:
+        for ci in data_dict["caption_indices"].detach().cpu().numpy():
+            num_sent_val.append(sum([(x==17 or x==15) for x in ci]))
+        data_dict["mean_sentence_length"] = np.mean(np.asarray(num_sent_val))
+        batch_caption_lengths = (data_dict["caption_indices"] > 0).to(dtype=torch.int32).sum(dim=1)    
+        data_dict["batch_caption_lenghts"] = batch_caption_lengths
         caption_length_gen += batch_caption_lengths.sum()
         caption_length_gt += data_dict["lang_len"].sum()
     else:
+        for li in data_dict["lang_indices"].detach().cpu().numpy():
+            num_sent_train.append(sum([(x==17 or x==15) for x in li]))
+        data_dict["mean_sentence_length"] = np.mean(np.asarray(num_sent_train))
+        
         caption_length_gen = 1
         caption_length_gt = 1 
     data_dict["caption_ratio"] = (caption_length_gen / caption_length_gt).detach().cpu().numpy()
