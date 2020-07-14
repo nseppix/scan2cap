@@ -43,7 +43,6 @@ Nicolas Seppich\\
 Technical University of Munich\\
 {\tt\small nicolas.seppich@tum.De}
 \and
-
 \small
 Supervisor: Dave Zhenyu Chen\\
 \small
@@ -102,7 +101,32 @@ Average pooling the feature vectors from VoteNet is not ideal as often only a sm
 
 \section{Experiments \& Results}
 
-Placeholder text.
+To allow a quantitative comparison between the proposed architectures, we have constructed the same training pipeline for the three models. As mentioned above, the models receive the point cloud of a scene, the ground truth bounding box of the target object and the tokenized description as input.
+Similar to \cite{xu2015show}, all architectures make use of teacher-forcing during training: instead of inserting the previous predicted word, the LSTM receives the previous ground truth word as input for captioning along with the coded feature vectors of the scene.  This allows for faster convergence by minimizing drift between the ground truth token and predicted word in training time. In evaluation time, the network takes the previous predicted word as input. 
+
+As metrics for performance evaluation we rely on BLEU \cite{Papineni2002BleuAM}, ROUGE-L \cite{Lin2004ROUGEAP}, METEOR \cite{Denkowski2014MeteorUL} and CIDEr \cite{DBLP:journals/corr/VedantamZP14a}.  In this paper we focus on the BLEU score to determine the best models as in \cite{xu2015show}. 
+
+For our models based on VoteNet we filter out all objects that have an object frequency value below 0.75. We also consider only the 8 closest objects, because these thresholds lead to better results representing the local scene context.   
+
+\subsection{Quantitative Improvements}
+In this experiment we want to investigate the influence of the architectural improvements we propose. All models include the same pre-trained masked PointNet++ feature extractor. 
+Table X shows the quantitative results. 
+
+As a first result, we can conclude that the baseline model achieves reasonably good results that are not far from the improved architectures. Comparing the BLEU-4 score to the results of the COCO Image Captioning Challenge 2015 "quote", our models outperform the best-performing architectures. Of course, the question always arises whether our task and the tasks of COCO Image Captioning are comparable. We argue that our vocabulary and gt sentence structure is much simpler and therefore leads to better results.
+
+Secondly, the results show that improving the feature extractor (improved architecture) and improving the captioning meachnism (attention) lead to higher scores. The best results are obtained by the attention model, except for the BLEU-4 score where the improved architecture is slightly better.                
+
+\subsection{Qualitative Analysis}
+In this experiment we want to analyze the quality of the predicted descriptions. For this purpose, we compare two exemplary ground truth and predicted description pairs shown in Figure X. 
+The first pair shows the comparison between the ground truth and the predictions of our three architectures. The result shows that the three models predict a correct description that puts the object into the context of its environment. There are slight differences in the context the models make use of, especially for the attention model. This indicates that the attention mechanism is capable of producing a description that is rather unusual. The baseline and improved architecture were able to predict a chair near a table, which is a fairly common scenario. 
+The second pair, which illustrates a long ground truth description and the prediction of the attention model, shows the accuracy of the prediction, even if it is quite short. 
+
+For all predicted descriptions we can observe a simple structure with two sentences. As an explanation we claim that the statistics of the ScanRefer data set influences this behavior. Therefore we have analyzed the number of tokens per description and the number of records in each description. Figures Z and Y support this assertion by showing the hsitograms of the number of tokens and record lengths for our predictions and for the ScanRefer data set, respectively.
+
+
+\subsection{Inference without GT}
+
+\section{Coclusion}
 
 \begin{figure*}
 	\begin{subfigure}[c]{\textwidth}
