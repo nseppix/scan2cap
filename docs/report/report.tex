@@ -65,18 +65,17 @@ In this work, we investigate the task of generating a description for a target o
 Extracting a detailed and semantic correct understanding of the layout of a 3D scene is crucial for many tasks, e.g. in robotics for navigation and interaction with objects. This includes relating the 3D positions of the objects and their spatial extent, so that a semantically correct description of the objects' environment is generated.
 However, to the best of our knowledge, there has been no work so far to generate a description of an object representation in point clouds or 3D data.
 
-Therefore, we are interested in implementing a pipeline to obtain a description for a given object in a 3D scan, using state-of-the-art point cloud feature extractors, object detectors, and a captioning mechanism to generate a semantic description for a given object in the 3D scene. This allows the object to be placed in a global semantic context within its environment.
+Therefore, we are interested in implementing a pipeline to obtain a description for a given object in a 3D scan, using state-of-the-art point cloud feature extractors, object detectors, and a captioning mechanism to generate a semantic description for a given object in the 3D scene. This allows the object to be placed in a global semantic context within its environment. Furthermore, our project lays down the groundwork for dense captioning, in which you obtain a semantic representation of the scene through computing a caption for all objects in that scene.
  
 %-------------------------------------------------------------------------
 \section{Related Work}
-Our work will be based on the ScanRefer dataset \cite{chen2019scanrefer}. This dataset consists of 1513 RGB-D scans of ScanNet \cite{dai2017scannet} and contains approximately 5 unique object descriptions for each object in each scene. The work of \cite{chen2019scanrefer} will also be used as guideline in this project.
+Our work is based on the ScanRefer dataset \cite{chen2019scanrefer}. This dataset consists of 1513 RGB-D scans of ScanNet \cite{dai2017scannet} and contains approximately 5 unique object descriptions for each object in each scene. The work of \cite{chen2019scanrefer} will also be used as guideline in this project.
 
 The extraction of features on point clouds is presented by \cite{qi2017pointnet++}, who apply the feature extraction directly on the point cloud on a hierarchical level, allowing the extraction of local features in a global context. 
 The task of object detection on point clouds is studied by \cite{qi2019deep}. 
 
 Methods for image captioning using visual attention are described by \cite{xu2015show}, \cite{lu2017knowing} and \cite{anderson2018bottom}.
 These methods have in common, that they generate a caption for the entire image.
-Since our goal includes using a bounding box for the object to be set in context to the scene, the work of \cite{rohrbach2016grounding} is also of interest for this project. 
 
 %-------------------------------------------------------------------------
 \section{Architecture}
@@ -110,7 +109,7 @@ For our models based on VoteNet we filter out all objects that have an object fr
 
 \subsection{Quantitative Improvements}
 In this experiment we want to investigate the influence of the architectural improvements we propose. All models include the same pre-trained masked PointNet++ feature extractor. 
-Table X shows the quantitative results. 
+\autoref{tab:quantitative_results} shows the quantitative results. 
 
 As a first result, we can conclude that the baseline model achieves reasonably good results that are not far from the improved architectures. Comparing the BLEU-4 score to the results of the COCO Image Captioning Challenge 2015 "quote", our models outperform the best-performing architectures. Of course, the question always arises whether our task and the tasks of COCO Image Captioning are comparable. We argue that our vocabulary and gt sentence structure is much simpler and therefore leads to better results.
 
@@ -150,6 +149,19 @@ For all predicted descriptions we can observe a simple structure with two senten
 	\caption{Model architectures for project}
 	\label{fig:architectures}
 \end{figure*}
+
+\begin{table*}
+	\centering
+	\begin{tabular}{l|cccc}
+		\textbf{Model} & \textbf{BLEU-4} & \textbf{ROUGLE-L} & \textbf{METEOR} & \textbf{CIDEr}\\
+		\hline
+		Baseline & 0.434 & 0.569 & 0.617 & 0.692 \\
+		With VoteNet & 0.447 & 0.580 & 0.625 & 0.757 \\
+		With Attention & 0.447 & 0.584 & 0.626 & 0.792  
+	\end{tabular}
+	\caption{Quantitative results}
+	\label{tab:quantitative_results}
+\end{table*}
 
 {\small
 \bibliographystyle{ieee_fullname}
