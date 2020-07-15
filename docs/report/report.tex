@@ -66,17 +66,16 @@ In this work, we investigate the task of generating a description for a target o
 \section{Problem Statement \& Motivation}
 
 Extracting a detailed and correct description of a 3D scene and included objects is crucial for many tasks, e.g. in robotics for navigation and interaction with objects.
-However, to the best of our knowledge, there has been no work so far to generate a description of an object representation in point clouds or 3D data. Therefore, we are interested in implementing a pipeline to obtain a description for a given object in a 3D scan to place it into a global semantic context within its environment. This project also lays down the groundwork for dense captioning, in which you obtain a semantic representation of the scene through computing a caption for all objects in that scene.
+However, to the best of our knowledge, there has been no work so far to generate a description of an object representation in point clouds or 3D data. Therefore, we are interested in implementing a pipeline to obtain a description for a given object in a 3D scan to place it into a global semantic context within its environment. This project lays down the groundwork for dense captioning, in which you compute a caption for all objects in that scene.
  
 %-------------------------------------------------------------------------
 \section{Related Work}
-Our work is based on the ScanRefer dataset \cite{chen2019scanrefer}. This dataset consists of 1513 RGB-D scans of ScanNet \cite{dai2017scannet} and contains approximately 5 unique object descriptions for each object in each scene. The work of \cite{chen2019scanrefer} will also be used as guideline in this project.
+Our work is based on the ScanRefer \cite{chen2019scanrefer} dataset and reference implementation for object relocalization. The dataset consists of 1513 RGB-D scans of ScanNet \cite{dai2017scannet} and contains approximately 5 unique object descriptions for each object in each scene.
 
 The extraction of features on point clouds is presented by \cite{qi2017pointnet++}, who apply the feature extraction directly on the point cloud on a hierarchical level, allowing the extraction of local features in a global context. 
-The task of object detection on point clouds is studied by \cite{qi2019deep}. 
+The architecture has also been extended to object detection in \cite{qi2019deep}. 
 
 Methods for image captioning using visual attention are described by \cite{xu2015show}, \cite{lu2017knowing} and \cite{anderson2018bottom}.
-These methods have in common, that they generate a caption for the entire image.
 
 %-------------------------------------------------------------------------
 \section{Architecture}
@@ -87,7 +86,7 @@ Given a point cloud $\mathit{p \in R^{N\times(d+C)}}$ and an object in that scen
 	\centering
 	\begin{minipage}[b]{.55\textwidth}
 		\includegraphics[width=.95\textwidth]{figures/arch_condensed_2.pdf}
-		\caption{Attention-based architecture.}
+		\caption{Attention-based architecture}
 		\label{fig:arch}
 	\end{minipage}
 	\begin{minipage}[b]{.44\textwidth}
@@ -109,41 +108,36 @@ Given a point cloud $\mathit{p \in R^{N\times(d+C)}}$ and an object in that scen
 
 \subsection{Baseline}
 
-To extract information from the point cloud, we use a PointNet++ \cite{qi2017pointnet++} model. To give the network information about which object we are interested in, we add a new feature channel to each point that masks all points that lay within the bounding box of the object. To ensure that we receive meaningful features, we use weights pretrained for classification of the masked object. The idea behind this is that classification will not only use information from the masked objects, but also global features, for example from close-by objects. 
+To extract information from the point cloud, we use a PointNet++ \cite{qi2017pointnet++} model. To give the network information about which object we are interested in, we add a new feature channel to each point that masks all points that lay within the bounding box of the object. To ensure that we receive meaningful features, we use weights pretrained for classification of the masked object.
 
 To generate the caption, we use a classical LSTM with an appended fully-connected layer. The fully-connected layer acts as a word classifier and maps the hidden state $h_{t}$ of the LSTM to our vocabulary. As input, the LSTM receives the feature vector extracted from the point cloud and the word embedding vector of the previously generated word. The word embedding is taken from a pre-computed GloVe \cite{pennington2014glove} word embedding matrix. This structure of the iterative caption generation is similar to \cite{xu2015show}.
 
 \subsection{Better Feature Extraction with VoteNet}
 
-Because PointNet++ is pretrained to classify the object of interest there is no guarantee that the feature vector will give high-quality information about the global context, thus limiting the baseline approach. In the second architecture iteration, we therefore employ a VoteNet \cite{qi2019deep} network, which computes a fixed number of object proposals and according feature vectors for our point cloud. Those feature vectors nicely describe the context of our scan and help the network to understand the surroundings of the object we want to describe. Because the number of proposals may vary and the proposals are not in a fixed order, we average pool them to obtain a concise representation of the information. This pooled feature vector is finally concatenated with the feature vector from PointNet++ and the embedding vector of the previously predicted word to then be passed into the LSTM.
+Because the PointNet++ feature vector contains mostly object specific and not global features, the baseline approach is limited. In the second architecture iteration, we therefore employ a VoteNet \cite{qi2019deep} network, which computes a fixed number of object proposals and according feature vectors for our point cloud. Those feature vectors help the network to understand the surroundings of the object we want to describe. Because the number of proposals may vary and the proposals are not in a fixed order, we average pool them to obtain a concise representation of the information. This pooled feature vector is finally concatenated with the feature vector from PointNet++ and the embedding vector of the previously predicted word to then be passed into the LSTM.
 
 \subsection{Better Captioning with Attention}
 
-Average pooling the feature vectors from VoteNet is not ideal as often only a small number of the object proposals is relevant for the final caption. Therefore, in the third model iteration we replace the average pooling step from before with an attention mechanism, as it is described in \cite{xu2015show}. The attention mechanism receives the hidden state of the captioning LSTM from the previous iteration and the feature vectors of the object proposals. It then uses a series of fully-connected layers to predict relevancy scores for the different object proposals that are turned into probabilities using the softmax function. Instead of average pooling, we can now multiply all feature vectors with their respective probability and sum over all of them. This approach allows our model to select the most relevant object for each token in the caption and make word predictions that better match the the context of the scene.
-
-\autoref{fig:arch} summarizes the project architectures.
+Average pooling the feature vectors from VoteNet is not ideal as often only a small number of the object proposals is relevant for the final caption. Therefore, in the third model iteration we replace the average pooling step from before with an attention mechanism, as it is described in \cite{xu2015show}. The attention mechanism receives the hidden state of the captioning LSTM from the previous iteration and the feature vectors of the object proposals. It then predicts a weighting for the different object proposals and pools the feature vectors based on those weights. This approach allows our model to select the most relevant object for each token in the caption and make word predictions that better match the the context of the scene. This architecture is shown \autoref{fig:arch}.
 
 
 \section{Experiments \& Results}
 
-To allow a quantitative comparison between the proposed architectures, we have constructed the same training pipeline for the three models. As mentioned above, the models receive the point cloud of a scene, the ground truth bounding box of the target object and the tokenized description as input.
-Similar to \cite{xu2015show}, all architectures make use of teacher-forcing during training: instead of inserting the previous predicted word, the LSTM receives the previous ground truth word as input for captioning along with the coded feature vectors of the scene.  This allows for faster convergence by minimizing drift between the ground truth token and predicted word in training time. In evaluation time, the network takes the previous predicted word as input. 
+In our experiments, we use the same training pipeline for our three models. Similar to \cite{xu2015show}, all architectures make use of teacher-forcing during training: instead of inserting the previous predicted word, the LSTM receives the previous ground truth word as input for captioning along with the encoded feature vectors of the scene. This allows for faster convergence by minimizing drift between the ground truth token and predicted word in training time. In evaluation time, the network takes the previously predicted word as input. During experiments, we found that our models based on VoteNet performed best when we filter out all objects that have an objectness score value below 0.75 and only the 8 closest objects.
 
-As metrics for performance evaluation we rely on BLEU \cite{Papineni2002BleuAM}, ROUGE-L \cite{Lin2004ROUGEAP}, METEOR \cite{Denkowski2014MeteorUL} and CIDEr \cite{DBLP:journals/corr/VedantamZP14a}.  In this paper we focus on the BLEU score to determine the best models as in \cite{xu2015show}. 
-
-For our models based on VoteNet we filter out all objects that have an object frequency value below 0.75. We also consider only the 8 closest objects, because these thresholds lead to better results representing the local scene context.   
+As metrics for performance evaluation we rely on BLEU \cite{Papineni2002BleuAM}, ROUGE-L \cite{Lin2004ROUGEAP}, METEOR \cite{Denkowski2014MeteorUL} and CIDEr \cite{DBLP:journals/corr/VedantamZP14a}.  In this paper we focus on the BLEU-4 score to determine the best models as in \cite{xu2015show}. 
 
 \subsection{Quantitative Improvements}
 In this experiment we want to investigate the influence of the architectural improvements we propose. All models include the same pre-trained masked PointNet++ feature extractor. 
 \hyperref[tab:quantitative_results]{Table~\ref*{tab:quantitative_results}} shows the quantitative results. 
 
-As a first result, we can conclude that the baseline model achieves reasonably good results that are not far from the improved architectures. Comparing the BLEU-4 score to the results of the COCO Image Captioning Challenge 2015 \cite{COCO}, our models outperform the best-performing architectures. Of course, the question always arises whether our task and the tasks of COCO Image Captioning are comparable. We argue that our vocabulary and gt sentence structure is much simpler and therefore leads to better results.
+Firstly, the baseline model achieves fairly good results that are not far from the improved architectures. Comparing the BLEU-4 score to the results of the COCO Image Captioning Challenge 2015 \cite{COCO}, our models outperform the best-performing architectures. However, we argue that our vocabulary and gt sentence structure is much simpler and therefore leads to better scores.
 
-Secondly, the results show that improving the feature extractor (improved architecture) and improving the captioning meachnism (attention) lead to higher scores. The best results are obtained by the attention model, except for the BLEU-4 score where the improved architecture is slightly better.                
+Secondly, the results show that improving the feature extraction (VoteNet) and the captioning mechanism (attention) leads to higher scores. The best results are obtained by the attention model, except for the BLEU-4 score where the improved architecture is marginally better.                
 
 \subsection{Qualitative Analysis}
-In this experiment we want to analyze the quality of the predicted descriptions. For this purpose, we compare two exemplary ground truth and predicted description pairs shown in \autoref{fig:examples}. 
-The first pair shows the comparison between the ground truth and the predictions of our three architectures. The result shows that the three models predict a correct description that puts the object into the context of its environment. There are slight differences in the context the models make use of, especially for the attention model. This indicates that the attention mechanism is capable of producing a description that is rather unusual. The baseline and improved architecture were able to predict a chair near a table, which is a fairly common scenario. 
+In this experiment we analyze the quality of the predicted descriptions. To this end, we take two examples from the validation set, which are shown in  \autoref{fig:examples}. 
+The first example shows the comparison between the ground truth and the predictions of our three architectures. The results show that the three models predict a reasonable description. There are slight differences in the context the models make use of, especially for the attention model. This indicates that the attention mechanism is capable of producing a description that is rather unusual. The baseline and improved architecture were able to predict a chair near a table, which is a fairly common scenario. 
 The second pair, which illustrates a long ground truth description and the prediction of the attention model, shows the accuracy of the prediction, even if it is quite short. 
 
 For all predicted descriptions we can observe a simple structure with two sentences. As an explanation we claim that the statistics of the ScanRefer data set influences this behavior. Therefore we have analyzed the number of tokens per description and the number of records in each description. Figures Z and Y support this assertion by showing the hsitograms of the number of tokens and record lengths for our predictions and for the ScanRefer data set, respectively.
