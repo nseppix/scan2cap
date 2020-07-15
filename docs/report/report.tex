@@ -82,11 +82,28 @@ These methods have in common, that they generate a caption for the entire image.
 
 Given a point cloud $\mathit{p \in R^{N\times(d+C)}}$ and an object in that scene, which is described by a target bounding box $b_{target}\in R^6$, our goal is to generate a meaningful caption for the object embedded in the context of the scene. To this end, we used three different pipelines, which are described in the following.
 
-\begin{figure*}
+\begin{figure*}	
 	\centering
-	\includegraphics[width=.75\textwidth]{figures/arch_condensed_2.pdf}
-	\caption{Attention-based architecture.}
-	\label{fig:arch}
+	\begin{minipage}[b]{.55\textwidth}
+		\includegraphics[width=.95\textwidth]{figures/arch_condensed_2.pdf}
+		\caption{Attention-based architecture.}
+		\label{fig:arch}
+	\end{minipage}
+	\begin{minipage}[b]{.44\textwidth}
+		{\scriptsize 
+			\begin{tabular}{|l|cccc|}
+			\hline
+			\textbf{Model} & \textbf{BLEU-4} & \textbf{ROUGLE-L} & \textbf{METEOR} & \textbf{CIDEr}\\
+			\hline
+			Baseline & 0.434 & 0.569 & 0.617 & 0.692 \\
+			With VoteNet & \textbf{0.447} & 0.580 & 0.625 & 0.757 \\
+			With Attention & 0.447 & \textbf{0.584} & \textbf{0.626} & \textbf{0.792} \\
+			\hline
+		\end{tabular}}
+		\vspace{.5\baselineskip}
+		\captionof{table}{Quantitative results}
+		\label{tab:quantitative_results}
+	\end{minipage}
 \end{figure*}
 
 \subsection{Baseline}
@@ -158,18 +175,6 @@ For all predicted descriptions we can observe a simple structure with two senten
 	\label{fig:architectures}
 \end{figure*}
 
-\begin{table*}
-	\centering
-	\begin{tabular}{l|cccc}
-		\textbf{Model} & \textbf{BLEU-4} & \textbf{ROUGLE-L} & \textbf{METEOR} & \textbf{CIDEr}\\
-		\hline
-		Baseline & 0.434 & 0.569 & 0.617 & 0.692 \\
-		With VoteNet & \textbf{0.447} & 0.580 & 0.625 & 0.757 \\
-		With Attention & 0.447 & \textbf{0.584} & \textbf{0.626} & \textbf{0.792}  
-	\end{tabular}
-	\caption{Quantitative results}
-	\label{tab:quantitative_results}
-\end{table*}
 
 \begin{figure*}
 	\centering
