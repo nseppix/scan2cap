@@ -82,6 +82,13 @@ These methods have in common, that they generate a caption for the entire image.
 
 Given a point cloud $\mathit{p \in R^{N\times(d+C)}}$ and an object in that scene, which is described by a target bounding box $b_{target}\in R^6$, our goal is to generate a meaningful caption for the object embedded in the context of the scene. To this end, we used three different pipelines, which are described in the following.
 
+\begin{figure*}
+	\centering
+	\includegraphics[width=.75\textwidth]{figures/arch_condensed_2.pdf}
+	\caption{Attention-based architecture.}
+	\label{fig:arch}
+\end{figure*}
+
 \subsection{Baseline}
 
 To extract information from the point cloud, we use a PointNet++ \cite{qi2017pointnet++} model. To give the network information about which object we are interested in, we add a new feature channel to each point that masks all points that lay within the bounding box of the object. To ensure that we receive meaningful features, we use weights pretrained for classification of the masked object. The idea behind this is that classification will not only use information from the masked objects, but also global features, for example from close-by objects. 
@@ -96,7 +103,8 @@ Because PointNet++ is pretrained to classify the object of interest there is no 
 
 Average pooling the feature vectors from VoteNet is not ideal as often only a small number of the object proposals is relevant for the final caption. Therefore, in the third model iteration we replace the average pooling step from before with an attention mechanism, as it is described in \cite{xu2015show}. The attention mechanism receives the hidden state of the captioning LSTM from the previous iteration and the feature vectors of the object proposals. It then uses a series of fully-connected layers to predict relevancy scores for the different object proposals that are turned into probabilities using the softmax function. Instead of average pooling, we can now multiply all feature vectors with their respective probability and sum over all of them. This approach allows our model to select the most relevant object for each token in the caption and make word predictions that better match the the context of the scene.
 
-\autoref{fig:architectures} summarizes the project architectures.
+\autoref{fig:arch} summarizes the project architectures.
+
 
 \section{Experiments \& Results}
 
