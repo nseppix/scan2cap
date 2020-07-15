@@ -25,6 +25,9 @@
 % Pages are numbered in submission mode, and unnumbered in camera-ready
 %\ifcvprfinal\pagestyle{empty}\fi
 \setcounter{page}{1}
+
+%\setlength{\textfloatsep}{5pt}
+
 \begin{document}
 
 %%%%%%%%% TITLE
@@ -63,9 +66,7 @@ In this work, we investigate the task of generating a description for a target o
 \section{Problem Statement \& Motivation}
 
 Extracting a detailed and correct description of a 3D scene and included objects is crucial for many tasks, e.g. in robotics for navigation and interaction with objects.
-However, to the best of our knowledge, there has been no work so far to generate a description of an object representation in point clouds or 3D data.
-
-Therefore, we are interested in implementing a pipeline to obtain a description for a given object in a 3D scan, using state-of-the-art point cloud feature extractors, object detectors, and a captioning mechanism. This allows the object to be placed in a global semantic context within its environment. Furthermore, our project lays down the groundwork for dense captioning, in which you obtain a semantic representation of the scene through computing a caption for all objects in that scene.
+However, to the best of our knowledge, there has been no work so far to generate a description of an object representation in point clouds or 3D data. Therefore, we are interested in implementing a pipeline to obtain a description for a given object in a 3D scan to place it into a global semantic context within its environment. This project also lays down the groundwork for dense captioning, in which you obtain a semantic representation of the scene through computing a caption for all objects in that scene.
  
 %-------------------------------------------------------------------------
 \section{Related Work}
@@ -134,77 +135,55 @@ For our models based on VoteNet we filter out all objects that have an object fr
 
 \subsection{Quantitative Improvements}
 In this experiment we want to investigate the influence of the architectural improvements we propose. All models include the same pre-trained masked PointNet++ feature extractor. 
-\autoref{tab:quantitative_results} shows the quantitative results. 
+\hyperref[tab:quantitative_results]{Table~\ref*{tab:quantitative_results}} shows the quantitative results. 
 
 As a first result, we can conclude that the baseline model achieves reasonably good results that are not far from the improved architectures. Comparing the BLEU-4 score to the results of the COCO Image Captioning Challenge 2015 \cite{COCO}, our models outperform the best-performing architectures. Of course, the question always arises whether our task and the tasks of COCO Image Captioning are comparable. We argue that our vocabulary and gt sentence structure is much simpler and therefore leads to better results.
 
 Secondly, the results show that improving the feature extractor (improved architecture) and improving the captioning meachnism (attention) lead to higher scores. The best results are obtained by the attention model, except for the BLEU-4 score where the improved architecture is slightly better.                
 
 \subsection{Qualitative Analysis}
-In this experiment we want to analyze the quality of the predicted descriptions. For this purpose, we compare two exemplary ground truth and predicted description pairs shown in Figure X. 
+In this experiment we want to analyze the quality of the predicted descriptions. For this purpose, we compare two exemplary ground truth and predicted description pairs shown in \autoref{fig:examples}. 
 The first pair shows the comparison between the ground truth and the predictions of our three architectures. The result shows that the three models predict a correct description that puts the object into the context of its environment. There are slight differences in the context the models make use of, especially for the attention model. This indicates that the attention mechanism is capable of producing a description that is rather unusual. The baseline and improved architecture were able to predict a chair near a table, which is a fairly common scenario. 
 The second pair, which illustrates a long ground truth description and the prediction of the attention model, shows the accuracy of the prediction, even if it is quite short. 
 
 For all predicted descriptions we can observe a simple structure with two sentences. As an explanation we claim that the statistics of the ScanRefer data set influences this behavior. Therefore we have analyzed the number of tokens per description and the number of records in each description. Figures Z and Y support this assertion by showing the hsitograms of the number of tokens and record lengths for our predictions and for the ScanRefer data set, respectively.
 
+\begin{figure}
+	\centering
+	\begin{subfigure}[c]{.49\linewidth}
+		\centering
+		\includegraphics[width=\linewidth]{figures/gt_scene0221_00_3_0_att_02.png}
+		\label{fig:example_1}
+	\end{subfigure}
+	\begin{subfigure}[c]{.49\linewidth}
+		\centering
+		\includegraphics[width=\textwidth]{figures/gt_scene0164_00_2_0_att_06.png}
+		\label{fig:example_2}
+	\end{subfigure}
+	\vspace{-1.\baselineskip}
+	\begin{flushleft}
+		{\scriptsize 
+			\textit{Left image:}\\
+			\textbf{GT}: there is a black chair. it is next to a cabinet on the side of the room .\\
+			\textbf{BL}: this is a black chair . it is to the left of the table .\\
+			\textbf{VN}: this is a black chair . it is to the left of the desk .\\
+			\textbf{Att}: this is a black chair . it is at the end of the \underline{bed} .\\
+			\textit{Right image:}\\
+			\textbf{GT}: the open kitchen cabinet is directly above the sink and the water container. the open kitchen cabinet is a brown box with one side hanging out .\\
+			\textbf{Att}: this is a white kitchen cabinet . it is above the \underline{sink} .\\
+			\textbf{Legend}: \textbf{GT}-Groundtruth, \textbf{BL}-Baseline, \textbf{VN}-With VoteNet, \textbf{Att}-With Attention \textbf{Bounding boxes}: \textbf{\color{green} Green}-Target object, \textbf{{\color{red}Red}-{\color{blue}Blue}}-Lowest to highest attention for marked token
+		}
+	\end{flushleft}
+	\vspace{-1.\baselineskip}
+	\caption{Examples from the ScanRefer validation set}
+	\label{fig:examples}
+	
+\end{figure}
+
 
 \subsection{Inference without GT}
 
 \section{Coclusion}
-
-\begin{figure*}
-	\begin{subfigure}[c]{\textwidth}
-		\centering
-		\includegraphics[width=\textwidth]{figures/arch_baseline.pdf}
-		\caption{Baseline model}
-		\label{fig:baseline}
-	\end{subfigure}
-	\begin{subfigure}[c]{\textwidth}
-		\centering
-		\includegraphics[width=\textwidth]{figures/arch_votenet.pdf}
-		\caption{Better feature extraction with VoteNet}
-		\label{fig:votenet}
-	\end{subfigure}
-	\begin{subfigure}[c]{\textwidth}
-		\centering
-		\includegraphics[width=\textwidth]{figures/arch_attention.pdf}
-		\caption{Better captioning with attention}
-		\label{fig:attention}
-	\end{subfigure}
-	\caption{Model architectures for project}
-	\label{fig:architectures}
-\end{figure*}
-
-
-\begin{figure*}
-	\centering
-	\begin{subfigure}[c]{.45\textwidth}
-		\centering
-		\includegraphics[width=\textwidth]{figures/gt_scene0221_00_3_0_att_02.png}
-		\caption{
-			\textbf{GT}: there is a black chair. it is next to a cabinet on the side of the room .\\
-			\textbf{BL}: this is a black chair . it is to the left of the table .\\
-			\textbf{VN}: this is a black chair . it is to the left of the desk .\\
-			\textbf{Att}: this is a black chair . it is at the end of the \underline{bed} .}
-		\label{fig:example_1}
-	\end{subfigure}
-	\begin{subfigure}[c]{.45\textwidth}
-		\centering
-		\includegraphics[width=\textwidth]{figures/gt_scene0164_00_2_0_att_06.png}
-		\caption{
-			\textbf{GT}: the open kitchen cabinet is directly above the sink and the water container. the open kitchen cabinet is a brown box with one side hanging out .\\
-			\textbf{Att}: this is a white kitchen cabinet . it is above the \underline{sink} .\\}
-		\label{fig:example_2}
-	\end{subfigure}
-	\vspace{.5\baselineskip}\\
-	{\footnotesize
-		\textbf{Legend}: \textbf{GT}-Groundtruth, \textbf{BL}-Baseline, \textbf{VN}-With VoteNet, \textbf{Att}-With Attention\\
-		\textbf{Bounding boxes}: \textbf{\color{green} Green}-Target object, \textbf{{\color{red}Red}-{\color{blue}Blue}}-Lowest to highest attention for marked token
-	}
-	\caption{Examples from the ScanRefer validation set}
-	\label{fig:examples}
-	
-\end{figure*}
 
 
 {\small
