@@ -156,12 +156,43 @@ For all predicted descriptions we can observe a simple structure with two senten
 		\textbf{Model} & \textbf{BLEU-4} & \textbf{ROUGLE-L} & \textbf{METEOR} & \textbf{CIDEr}\\
 		\hline
 		Baseline & 0.434 & 0.569 & 0.617 & 0.692 \\
-		With VoteNet & 0.447 & 0.580 & 0.625 & 0.757 \\
-		With Attention & 0.447 & 0.584 & 0.626 & 0.792  
+		With VoteNet & \textbf{0.447} & 0.580 & 0.625 & 0.757 \\
+		With Attention & 0.447 & \textbf{0.584} & \textbf{0.626} & \textbf{0.792}  
 	\end{tabular}
 	\caption{Quantitative results}
 	\label{tab:quantitative_results}
 \end{table*}
+
+\begin{figure*}
+	\centering
+	\begin{subfigure}[c]{.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{figures/gt_scene0221_00_3_0_att_02.png}
+		\caption{
+			\textbf{GT}: there is a black chair. it is next to a cabinet on the side of the room .\\
+			\textbf{BL}: this is a black chair . it is to the left of the table .\\
+			\textbf{VN}: this is a black chair . it is to the left of the desk .\\
+			\textbf{Att}: this is a black chair . it is at the end of the \underline{bed} .}
+		\label{fig:example_1}
+	\end{subfigure}
+	\begin{subfigure}[c]{.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{figures/gt_scene0164_00_2_0_att_06.png}
+		\caption{
+			\textbf{GT}: the open kitchen cabinet is directly above the sink and the water container. the open kitchen cabinet is a brown box with one side hanging out .\\
+			\textbf{Att}: this is a white kitchen cabinet . it is above the \underline{sink} .\\}
+		\label{fig:example_2}
+	\end{subfigure}
+	\vspace{.5\baselineskip}\\
+	{\footnotesize
+		\textbf{Legend}: \textbf{GT}-Groundtruth, \textbf{BL}-Baseline, \textbf{VN}-With VoteNet, \textbf{Att}-With Attention\\
+		\textbf{Bounding boxes}: \textbf{\color{green} Green}-Target object, \textbf{{\color{red}Red}-{\color{blue}Blue}}-Lowest to highest attention for marked token
+	}
+	\caption{Examples from the ScanRefer validation set}
+	\label{fig:examples}
+	
+\end{figure*}
+
 
 {\small
 \bibliographystyle{ieee_fullname}
