@@ -136,7 +136,7 @@ For our models based on VoteNet we filter out all objects that have an object fr
 In this experiment we want to investigate the influence of the architectural improvements we propose. All models include the same pre-trained masked PointNet++ feature extractor. 
 \autoref{tab:quantitative_results} shows the quantitative results. 
 
-As a first result, we can conclude that the baseline model achieves reasonably good results that are not far from the improved architectures. Comparing the BLEU-4 score to the results of the COCO Image Captioning Challenge 2015 "quote", our models outperform the best-performing architectures. Of course, the question always arises whether our task and the tasks of COCO Image Captioning are comparable. We argue that our vocabulary and gt sentence structure is much simpler and therefore leads to better results.
+As a first result, we can conclude that the baseline model achieves reasonably good results that are not far from the improved architectures. Comparing the BLEU-4 score to the results of the COCO Image Captioning Challenge 2015 \cite{COCO}, our models outperform the best-performing architectures. Of course, the question always arises whether our task and the tasks of COCO Image Captioning are comparable. We argue that our vocabulary and gt sentence structure is much simpler and therefore leads to better results.
 
 Secondly, the results show that improving the feature extractor (improved architecture) and improving the captioning meachnism (attention) lead to higher scores. The best results are obtained by the attention model, except for the BLEU-4 score where the improved architecture is slightly better.                
 
