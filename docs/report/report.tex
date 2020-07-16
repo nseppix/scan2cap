@@ -26,15 +26,14 @@
 %\ifcvprfinal\pagestyle{empty}\fi
 \setcounter{page}{1}
 
-%\setlength{\textfloatsep}{5pt}
-
 \begin{document}
 
 %%%%%%%%% TITLE
 \title{Project Report: Scan2Cap}
 
-\author{Felix Wimbauer\\
-Technical University of Munich\\
+\author{
+\small Felix Wimbauer\\
+\small Technical University of Munich\\
 {\tt\small felix.wimbauer@tum.de}
 % For a paper whose authors are all at the same institution,
 % omit the following lines up until the closing ``}''.
@@ -42,12 +41,12 @@ Technical University of Munich\\
 % just like the second author.
 % To save space, use either the email address or home page, not both
 \and
-Nicolas Seppich\\
-Technical University of Munich\\
+\small Nicolas Seppich\\
+\small Technical University of Munich\\
 {\tt\small nicolas.seppich@tum.De}
 \and
 \small
-Supervisor: Dave Zhenyu Chen\\
+\textbf{Supervisor}: Dave Zhenyu Chen\\
 \small
 Technical University of Munich\\
 {\tt\small zhenyu.chen@tum.de }
@@ -123,12 +122,12 @@ Average pooling the feature vectors from VoteNet is not ideal as often only a sm
 
 \section{Experiments \& Results}
 
-In our experiments, we use the same training pipeline for our three models. Similar to \cite{xu2015show}, all architectures make use of teacher-forcing during training: instead of inserting the previous predicted word, the LSTM receives the previous ground truth word as input for captioning along with the encoded feature vectors of the scene. This allows for faster convergence by minimizing drift between the ground truth token and predicted word in training time. In evaluation time, the network takes the previously predicted word as input. During experiments, we found that our models based on VoteNet performed best when we filter out all objects that have an objectness score value below 0.75 and only the 8 closest objects.
+In our experiments, we use the same training pipeline for our three models. Similar to \cite{xu2015show}, all architectures make use of teacher-forcing during training: instead of inserting the previous predicted word, the LSTM receives the previous ground truth word as input for captioning along with the encoded feature vectors of the scene. This allows for faster convergence by minimizing drift between the ground truth token and predicted word in training time. In evaluation time, the network takes the previously predicted word as input. During experiments, we found that our models based on VoteNet performed best when we filter out all objects that have an objectness score value below 0.75 and use only the 8 closest objects.
 
 As metrics for performance evaluation we rely on BLEU \cite{Papineni2002BleuAM}, ROUGE-L \cite{Lin2004ROUGEAP}, METEOR \cite{Denkowski2014MeteorUL} and CIDEr \cite{DBLP:journals/corr/VedantamZP14a}.  In this paper we focus on the BLEU-4 score to determine the best models as in \cite{xu2015show}. 
 
 \subsection{Quantitative Improvements}
-In this experiment we want to investigate the influence of the architectural improvements we propose. All models include the same pre-trained masked PointNet++ feature extractor. 
+In this experiment, we investigate the influence of the architectural improvements we propose. All models include the same pre-trained masked PointNet++ feature extractor. 
 \hyperref[tab:quantitative_results]{Table~\ref*{tab:quantitative_results}} shows the quantitative results. 
 
 Firstly, the baseline model achieves fairly good results that are not far from the improved architectures. Comparing the BLEU-4 score to the results of the COCO Image Captioning Challenge 2015 \cite{COCO}, our models outperform the best-performing architectures. However, we argue that our vocabulary and gt sentence structure is much simpler and therefore leads to better scores.
@@ -136,13 +135,10 @@ Firstly, the baseline model achieves fairly good results that are not far from t
 Secondly, the results show that improving the feature extraction (VoteNet) and the captioning mechanism (attention) leads to higher scores. The best results are obtained by the attention model, except for the BLEU-4 score where the improved architecture is marginally better.                
 
 \subsection{Qualitative Analysis}
-In this experiment we analyze the quality of the predicted descriptions. To this end, we take two examples from the validation set, which are shown in  \autoref{fig:examples}. 
-The first example shows the comparison between the ground truth and the predictions of our three architectures. The results show that the three models predict a reasonable description. There are slight differences in the context the models make use of, especially for the attention model. This indicates that the attention mechanism is capable of producing a description that is rather unusual. The baseline and improved architecture were able to predict a chair near a table, which is a fairly common scenario. 
-The second pair, which illustrates a long ground truth description and the prediction of the attention model, shows the accuracy of the prediction, even if it is quite short. 
+In this experiment, we analyze the quality of the predicted descriptions in two examples \autoref{fig:examples}. 
+The first example shows the comparison between the predictions of our three architectures. The three models predict a reasonable description but differ slightly in the conceived context. The attention model is able to make the most context-specific prediction by focusing on the bed (visible through color coding), a very unusual combination. This is also visible in the second example. Additionally, we can observe that our network relies on a simple two sentence-structure. We believe that this is a result of the distribution of the ScanRefer data set. Analysis of the number of tokens per description shows that the distribution of predicted and ground truth captions share the same mode of 15 tokens, however, the predicted captions have a smaller mean and variance.
 
-For all predicted descriptions we can observe a simple structure with two sentences. As an explanation we claim that the statistics of the ScanRefer data set influences this behavior. Therefore we have analyzed the number of tokens per description and the number of records in each description. Figures Z and Y support this assertion by showing the hsitograms of the number of tokens and record lengths for our predictions and for the ScanRefer data set, respectively.
-
-\begin{figure}
+\begin{figure}[b]
 	\centering
 	\begin{subfigure}[c]{.49\linewidth}
 		\centering
@@ -171,14 +167,7 @@ For all predicted descriptions we can observe a simple structure with two senten
 	\vspace{-1.\baselineskip}
 	\caption{Examples from the ScanRefer validation set}
 	\label{fig:examples}
-	
 \end{figure}
-
-
-\subsection{Inference without GT}
-
-\section{Coclusion}
-
 
 {\small
 \bibliographystyle{ieee_fullname}
