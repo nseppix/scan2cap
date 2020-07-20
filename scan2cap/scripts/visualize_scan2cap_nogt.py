@@ -352,8 +352,8 @@ def dump_results(args, scanrefer, data, config):
         # basic info
         idx = ids[i]
         scene_id = scanrefer[idx]["scene_id"]
-        object_id = scanrefer[idx]["object_id"]
-        ann_id = scanrefer[idx]["ann_id"]
+        object_id = data["object_id"][idx]
+        ann_id = data["ann_id"][idx]
     
         # scene_output
         scene_dump_dir = os.path.join(dump_dir, scene_id)
@@ -361,6 +361,7 @@ def dump_results(args, scanrefer, data, config):
             os.mkdir(scene_dump_dir)
 
             # # Dump the original scene point clouds
+        if not os.path.exists(os.path.join(scene_dump_dir, 'mesh.ply')):
             mesh = align_mesh(scene_id)
             mesh.write(os.path.join(scene_dump_dir, 'mesh.ply'))
 
@@ -422,18 +423,20 @@ def visualize(args):
     print("preparing data...")
     scanrefer, scene_list = get_scanrefer(args)
 
-    scanrefer = [next(sample for sample in scanrefer if sample["scene_id"] == s_id) for s_id in ["scene0064_00",
-                                                                                                 "scene0100_00",
-                                                                                                 "scene0086_00",
-                                                                                                 "scene0081_00",
-                                                                                                 "scene0084_00",
-                                                                                                 "scene0164_00",
-                                                                                                 "scene0193_00",
-                                                                                                 "scene0144_00",
-                                                                                                 "scene0221_00",
-                                                                                                 "scene0203_00",
-                                                                                                 "scene0222_00",
-                                                                                                 "scene0231_00"]]
+    scanrefer = [next(sample for sample in scanrefer if sample["scene_id"] == s_id) for s_id in ["scene0050_00",
+                                                                                                 # "scene0064_00",
+                                                                                                 # "scene0100_00",
+                                                                                                 # "scene0086_00",
+                                                                                                 # "scene0081_00",
+                                                                                                 # "scene0084_00",
+                                                                                                 # "scene0164_00",
+                                                                                                 # "scene0193_00",
+                                                                                                 # "scene0144_00",
+                                                                                                 # "scene0221_00",
+                                                                                                 # "scene0203_00",
+                                                                                                 # "scene0222_00",
+                                                                                                 # "scene0231_00"
+                                                                                                 ]]
 
     # scanrefer = scanrefer[4:5]
 
@@ -466,7 +469,7 @@ def visualize(args):
                  center, cls, size in zip(centers.cpu(), size_classes.cpu(), sizes.cpu())]).to(dtype=torch.float32)
 
             for objectness, center, size in zip(objectness, centers, sizes):
-                if objectness < .8:
+                if objectness < .95:
                     continue
                 data["ref_center_label"] = center.unsqueeze(0)
                 data["ref_size_residual_label"] = size.unsqueeze(0)
@@ -499,7 +502,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_votenet', action='store_true', help="Use votenet as additional feature extractor. (Required for attention)")
     parser.add_argument('--use_attention', action='store_true', help="Use attention for captioning, only works if votenet is used")
     parser.add_argument('--objectness_thresh', type=float, help="Threshold for accepting objects proposed by votenet", default=.75)
-    parser.add_argument('--n_closest', type=int, help="Number of n closest votenet proposals are considered", default=32)
+    parser.add_argument('--n_closest', type=int, help="Number of n closest votenet proposals are considered", default=8)
     parser.add_argument('--cp', type=str, help="Checkpoint location for Scan2Cap model.", default=None)
     args = parser.parse_args()
 
