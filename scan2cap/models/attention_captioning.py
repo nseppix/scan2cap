@@ -108,9 +108,11 @@ class Attentive_Decoder(nn.Module):
             # Sort input data by decreasing lengths; why? apparent below
             # caption_lengths, sort_ind = caption_lengths.squeeze(1).sort(dim=0, descending=True)
             target_caption_lengths, sort_ind = torch.sort(target_caption_lengths, dim=0, descending=True)
+            
             aggregated_obj_features = aggregated_obj_features[sort_ind]
             obj_features = obj_features[sort_ind]
             target_caption_embeddings = target_caption_embeddings[sort_ind]
+            object_mask = object_mask[sort_ind]
 
             # Initialize LSTM state
             h, c = self.init_hidden_state(torch.cat([torch.mean(aggregated_obj_features,dim=1), obj_features], dim=1))  #(batch_size, decoder_dim)
@@ -152,6 +154,8 @@ class Attentive_Decoder(nn.Module):
             alphas_resorted = alphas[orig_idx]
             data_dict["alphas"] = alphas_resorted
             data_dict["caption_predictions"] = predictions_resorted
+            data_dict["object_mask"] = object_mask[orig_idx]
+            
 
         else:
             # init hidden, cell state & prediction
@@ -174,7 +178,7 @@ class Attentive_Decoder(nn.Module):
             incomplete_indices = [i for i in range(batch_size)]
 
             while True:
-                attention_weighted_encoding, alpha = self.attention(aggregated_obj_features[incomplete_indices], h, object_mask)
+                attention_weighted_encoding, alpha = self.attention(aggregated_obj_features[incomplete_indices], h, object_mask[incomplete_indices])
                 gate = self.sigmoid(self.f_beta(h))
                 attention_weighted_encoding = gate * attention_weighted_encoding
                 conc_encodings = torch.cat([attention_weighted_encoding, obj_features[incomplete_indices]], dim=1)
@@ -197,13 +201,16 @@ class Attentive_Decoder(nn.Module):
                 completed_indices = [incomplete_indices[i] for i in completed_indices]
                 for c_i in completed_indices:
                     incomplete_indices.remove(c_i)
-
+                
                 step += 1
                 if step >= CONF.TRAIN.MAX_DES_LEN or len(incomplete_indices) == 0: # we can think about this value
                     break
 
+
+
             data_dict["caption_indices"] = predictions
             scores = obj_features.new_zeros((batch_size, self.vocab_size, CONF.TRAIN.MAX_DES_LEN))
+
 
             # tmp = torch.tensor(predictions)
             tmp = predictions.clone().detach()
@@ -212,6 +219,7 @@ class Attentive_Decoder(nn.Module):
 
             data_dict["caption_predictions"] = scores
             data_dict["alphas"] = alphas
+            data_dict["object_mask"] = object_mask
 
         return data_dict
 
@@ -251,6 +259,6 @@ class Attention(nn.Module):
                 alpha[i][object_mask_] = self.softmax(att_[object_mask_])    # (batch_size, num_pixels)
         attention_weighted_encoding = (encoder_out * alpha.unsqueeze(2)).sum(dim=1)  # (batch_size, encoder_dim)
 
-        print(torch.topk(alpha, 4, dim=1))
+        #print(torch.topk(alpha, 4, dim=1))
 
         return attention_weighted_encoding, alpha
