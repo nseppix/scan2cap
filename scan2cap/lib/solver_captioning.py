@@ -14,7 +14,7 @@ from tensorboardX import SummaryWriter
 
 sys.path.append(os.path.join(os.getcwd(), "lib")) # HACK add the lib folder
 from lib.config import CONF
-from lib.loss_helper import get_loss, caption_loss, attention_regularization
+from lib.loss_helper import caption_loss, attention_regularization
 from utils.eta import decode_eta
 from utils.utils_lstm import clip_gradient
 

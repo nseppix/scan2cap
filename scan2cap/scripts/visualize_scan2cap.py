@@ -451,18 +451,9 @@ def visualize(args):
     print("preparing data...")
     scanrefer, scene_list = get_scanrefer(args)
 
-    scanrefer = [s for s in scanrefer if s["scene_id"] in ["scene0064_00",
-                                                           "scene0100_00",
-                                                           "scene0086_00",
-                                                           "scene0081_00",
-                                                           "scene0084_00",
+    scanrefer = [s for s in scanrefer if s["scene_id"] in [
                                                            "scene0164_00",
-                                                           "scene0193_00",
-                                                           "scene0144_00",
-                                                           "scene0221_00",
-                                                           "scene0203_00",
-                                                           "scene0222_00",
-                                                           "scene0231_00"]]
+                                                           ]]
 
     # dataloader
     _, dataloader = get_dataloader(args, scanrefer, scene_list, "val", DC, False)
