@@ -1,6 +1,6 @@
 # Scan2Cap: Generate Descriptions for 3D Scans 
 
-## Lik to Video report
+## Link to Video report
 Our final presentation can be found [here](https://www.youtube.com/watch?v=RB6qlZPY2iM). 
 
 ## Setup
