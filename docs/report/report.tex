@@ -57,8 +57,8 @@ Technical University of Munich\\
 
 %%%%%%%%% ABSTRACT
 \begin{abstract}
-In this work, we investigate the task of generating a description for a target object in context to its environment in the 3D domain. To this end, we propose a pipeline which combines concepts from 3D object detection and visual attention-based captioning. The proposed pipeline first uses VoteNet to extract feature vectors of the scene. It then combines this information with the features of the object of interest, which are extracted by PointNet++, and feeds this data into an LSTM captioning mechanism, that generates a caption of the object in context of the scene.
-   
+In this work, we investigate the task of generating a description for a target object in context to its environment in the 3D domain. To this end, we propose a pipeline which combines concepts from 3D object detection and visual attention-based captioning. The proposed pipeline first uses VoteNet to extract feature vectors of the scene. It then combines this information with the features of the object of interest, which are extracted by PointNet++, and feeds this data into an LSTM captioning mechanism, that generates a caption of the object in context of the scene.\\{\normalfont{\footnotesize \texttt{
+\textbf{Links}: \href{https://youtu.be/RB6qlZPY2iM}{Presentation Video}, \href{https://gitlab.lrz.de/wimbauer/adl4cv}{Gitlab Repository}}}}
 \end{abstract}
 
 %%%%%%%%% BODY TEXT
@@ -69,12 +69,7 @@ However, to the best of our knowledge, there has been no work so far to generate
  
 %-------------------------------------------------------------------------
 \section{Related Work}
-Our work is based on the ScanRefer \cite{chen2019scanrefer} dataset and reference implementation for object relocalization. The dataset consists of 1513 RGB-D scans of ScanNet \cite{dai2017scannet} and contains approximately 5 unique object descriptions for each object in each scene.
-
-The extraction of features on point clouds is presented by \cite{qi2017pointnet++}, who apply the feature extraction directly on the point cloud on a hierarchical level, allowing the extraction of local features in a global context. 
-The architecture has also been extended to object detection in \cite{qi2019deep}. 
-
-Methods for image captioning using visual attention are described by \cite{xu2015show}, \cite{lu2017knowing} and \cite{anderson2018bottom}.
+Our work is based on the ScanRefer \cite{chen2019scanrefer} dataset and reference implementation for object relocalization. The dataset consists of 1513 RGB-D scans of ScanNet \cite{dai2017scannet} and contains approximately 5 unique object descriptions for each object in each scene. The extraction of features on point clouds is presented by \cite{qi2017pointnet++}, who apply the feature extraction directly on the point cloud on a hierarchical level, allowing the extraction of local features in a global context. The architecture has also been extended to object detection in \cite{qi2019deep}. Methods for image captioning using visual attention are described by \cite{xu2015show}, \cite{lu2017knowing} and \cite{anderson2018bottom}.
 
 %-------------------------------------------------------------------------
 \section{Architecture}
@@ -158,6 +153,7 @@ The first example shows the comparison between the predictions of our three arch
 			\textbf{BL}: this is a black chair . it is to the left of the table .\\
 			\textbf{VN}: this is a black chair . it is to the left of the desk .\\
 			\textbf{Att}: this is a black chair . it is at the end of the \underline{bed} .\\
+			\vspace{.5\baselineskip}
 			\textit{Right image:}\\
 			\textbf{GT}: the open kitchen cabinet is directly above the sink and the water container. the open kitchen cabinet is a brown box with one side hanging out .\\
 			\textbf{Att}: this is a white kitchen cabinet . it is above the \underline{sink} .\\
